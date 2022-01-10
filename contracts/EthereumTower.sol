@@ -163,12 +163,12 @@ contract EthereumTowers is
         participantCount = 0;
     }
 
-    function changeRound(uint256 itemsForSale, bool roundType) external {
+    function changeRound(uint256 itemsForSale, bool privateRound) external {
         require(
             hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "EthereumTowers: must have admin role"
         );
-        isPrivateRound = roundType;
+        isPrivateRound = privateRound;
         aveliableItemsOnRound = itemsForSale;
     }
 
@@ -185,6 +185,7 @@ contract EthereumTowers is
             hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "EthereumTowers: must have admin role"
         );
+        require(_tower == 1 || _tower == 2, "Ethereum tower: aveiable number 1 or 2");
         activeTower = _tower;
     }
 
@@ -234,7 +235,7 @@ contract EthereumTowers is
                 require(!ownerOfToken[to], "User can have only one of the nft");
                 require(
                     participantCount < aveliableItemsOnRound,
-                    "Please await next round"
+                    "Please wait for the next round to begin"
                 );
                 _mint(to, tokenId);
                 tokenUrl[tokenId] = tokenUri;
