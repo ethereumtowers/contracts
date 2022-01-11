@@ -6,7 +6,8 @@
   "scripts": {
     "test": "npx hardhat --network ganache test",
     "deploy-testnet": "npx hardhat run --network rinkeby scripts/test-deployment.js",
-    "deploy-testnet-2": "npx hardhat run --network rinkeby scripts/test-deployment-edited.js"
+    "deploy-testnet-2": "npx hardhat run --network rinkeby scripts/test-deployment-edited.js",
+    "flatten:Tower": "npx hardhat flatten contracts/EthereumTower.sol > flattened_tower.sol --show-stack-traces"
   },
   "author": "Sergey Kononov",
   "license": "MIT",
