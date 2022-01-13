@@ -37,12 +37,63 @@ describe("EthereumTower contract", function () {
       await expect(ethereumTowers.changeTower(3)).to.be.revertedWith('Ethereum tower: aveiable number 1 or 2');
     })
 
+    it("should restrict calling changeTower to admin role only", async function () {
+      const [_, testUser] = await ethers.getSigners();
+
+      await expect(
+        ethereumTowers.connect(testUser).changeTower(2)
+      ).to.be.revertedWith('EthereumTowers: must have admin role');
+    })
+
+    it("should change active stage to 15 and price to 1500", async function () {
+      await ethereumTowers.changeStage(15, 1500);
+
+      let activeStage = await ethereumTowers.activeStage();
+      let stagePrice = await ethereumTowers.stagePrice();
+
+      expect(activeStage == 15).to.be.true && expect(stagePrice == 1500).to.be.true;
+    })
+
+    it("should restrict calling changeStage to admin role only", async function () {
+      const [_, testUser] = await ethers.getSigners();
+
+      await expect(
+        ethereumTowers.connect(testUser).changeStage(15, 1500)
+      ).to.be.revertedWith('EthereumTowers: must have admin role');
+    })
+
+    it("should start private sale round for 10 items", async function () {
+      await ethereumTowers.changeRound(10, true);
+
+      let isPrivateRound = await ethereumTowers.isPrivateRound();
+      let availableItemsOnRound = await ethereumTowers.aveliableItemsOnRound();
+
+      expect(isPrivateRound == true).to.be.true && expect(availableItemsOnRound == 10).to.be.true;
+    })
+
+    it("should start public sale round for 50 items", async function () {
+      await ethereumTowers.changeRound(50, false);
+
+      let isPrivateRound = await ethereumTowers.isPrivateRound();
+      let availableItemsOnRound = await ethereumTowers.aveliableItemsOnRound();
+
+      expect(isPrivateRound == false).to.be.true && expect(availableItemsOnRound == 50).to.be.true;
+    })
+
+    it("should restrict calling changeRound to admin role only", async function () {
+      const [_, testUser] = await ethers.getSigners();
+
+      await expect(
+        ethereumTowers.connect(testUser).changeRound(100, true)
+      ).to.be.revertedWith('EthereumTowers: must have admin role');
+    })
+
     it("should add WHITELISTED role to stage 0", async function () {
       expect(await ethereumTowers.addStageRole(0, whitelistedRole));
     })
 
     it("should restrict calling addStageRole to admin role only", async function () {
-      const [_, testUser] = await ethers.getSigners()
+      const [_, testUser] = await ethers.getSigners();
 
       await expect(
         ethereumTowers.connect(testUser).addStageRole(0, whitelistedRole)
@@ -74,11 +125,33 @@ describe("EthereumTower contract", function () {
 
     it("should restrict calling batchRoles to admin role only", async function () {
       const wallets = Array.from({ length: 10 }, () => ethers.Wallet.createRandom().address);
-      const [_, testUser] = await ethers.getSigners()
+      const [_, testUser] = await ethers.getSigners();
 
       await expect(
         ethereumTowers.connect(testUser).batchRoles(wallets, whitelistedRole)
       ).to.be.revertedWith('EthereumTowers: must have admin role');
+    })
+
+    it("should revert get tokenURI for non-existing token", async function () {
+      await expect(
+        ethereumTowers.tokenURI(31337)
+      ).to.be.revertedWith("ERC721Metadata: URI query for nonexistent token");
+    })
+
+    it("should revert updateTokenUrl for non-existing token", async function () {
+      const [_, testUser] = await ethers.getSigners();
+
+      await expect(
+        ethereumTowers.updateTokenUrl(313377, 'https://my.new.token.url')
+      ).to.be.revertedWith("");
+    })
+
+    it("should restrict calling updateTokenUrl to admin role only", async function () {
+      const [_, testUser] = await ethers.getSigners();
+
+      await expect(
+        ethereumTowers.connect(testUser).updateTokenUrl(31337, 'https://my.new.token.url')
+      ).to.be.revertedWith("EthereumTowers: must have admin role");
     })
   })
 
