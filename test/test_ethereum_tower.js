@@ -1,12 +1,44 @@
-const { expect } = require('chai')
-const { ethers } = require('hardhat')
+const { expect } = require('chai');
+const { ethers } = require('hardhat');
 const hre = require('hardhat');
-const consola = require('consola')
+const consola = require('consola');
 
-const contractName = "EthereumTowers"
+const contractName = "EthereumTowers";
 
-let towersContractAddress
+const SIGNING_DOMAIN = "ETT_VOUCHER";
+const SIGNATURE_VERSION = "1";
 
+let towersContractAddress;
+
+async function createAndSignVoucher(tokenId, tokenUri, contract, signer) {
+  const chainId = await contract.getChainId();
+
+  const signingDomain = {
+    name: SIGNING_DOMAIN,
+    version: SIGNATURE_VERSION,
+    verifyingContract: contract.address,
+    chainId
+  };
+
+  const types = {
+    EttVoucher: [
+      { name: "tokenId", type: "uint256" },
+      { name: "uri", type: "string" }
+    ]
+  };
+
+  const voucher = {
+    tokenId: tokenId,
+    uri: tokenUri
+  };
+
+  const signature = await signer._signTypedData(signingDomain, types, voucher);
+
+  return {
+    ...voucher,
+    signature: signature
+  };
+}
 
 describe("EthereumTower contract", function () {
   it("should deploy the new EthereumTower smart contract", async function () {
@@ -28,22 +60,22 @@ describe("EthereumTower contract", function () {
       contractFactory = await ethers.getContractFactory(contractName);
       ethereumTowers = contractFactory.attach(towersContractAddress);
       whitelistedRole = await ethereumTowers.WHITELISTED();
-    })
+    });
 
     it("should revert changeTower to unsupported tower", async function () {
       const contractFactory = await ethers.getContractFactory(contractName);
       const ethereumTowers = contractFactory.attach(towersContractAddress)
 
-      await expect(ethereumTowers.changeTower(3)).to.be.revertedWith('Ethereum tower: aveiable number 1 or 2');
-    })
+      await expect(ethereumTowers.changeTower(3))
+        .to.be.revertedWith('Ethereum tower: aveiable number 1 or 2');
+    });
 
     it("should restrict calling changeTower to admin role only", async function () {
       const [_, testUser] = await ethers.getSigners();
 
-      await expect(
-        ethereumTowers.connect(testUser).changeTower(2)
-      ).to.be.revertedWith('EthereumTowers: must have admin role');
-    })
+      await expect(ethereumTowers.connect(testUser).changeTower(2))
+        .to.be.revertedWith('EthereumTowers: must have admin role');
+    });
 
     it("should change active stage to 15 and price to 1500", async function () {
       await ethereumTowers.changeStage(15, 1500);
@@ -52,15 +84,14 @@ describe("EthereumTower contract", function () {
       let stagePrice = await ethereumTowers.stagePrice();
 
       expect(activeStage == 15).to.be.true && expect(stagePrice == 1500).to.be.true;
-    })
+    });
 
     it("should restrict calling changeStage to admin role only", async function () {
       const [_, testUser] = await ethers.getSigners();
 
-      await expect(
-        ethereumTowers.connect(testUser).changeStage(15, 1500)
-      ).to.be.revertedWith('EthereumTowers: must have admin role');
-    })
+      await expect(ethereumTowers.connect(testUser).changeStage(15, 1500))
+        .to.be.revertedWith('EthereumTowers: must have admin role');
+    });
 
     it("should start private sale round for 10 items", async function () {
       await ethereumTowers.changeRound(10, true);
@@ -69,7 +100,7 @@ describe("EthereumTower contract", function () {
       let availableItemsOnRound = await ethereumTowers.aveliableItemsOnRound();
 
       expect(isPrivateRound == true).to.be.true && expect(availableItemsOnRound == 10).to.be.true;
-    })
+    });
 
     it("should start public sale round for 50 items", async function () {
       await ethereumTowers.changeRound(50, false);
@@ -78,33 +109,31 @@ describe("EthereumTower contract", function () {
       let availableItemsOnRound = await ethereumTowers.aveliableItemsOnRound();
 
       expect(isPrivateRound == false).to.be.true && expect(availableItemsOnRound == 50).to.be.true;
-    })
+    });
 
     it("should restrict calling changeRound to admin role only", async function () {
       const [_, testUser] = await ethers.getSigners();
 
-      await expect(
-        ethereumTowers.connect(testUser).changeRound(100, true)
-      ).to.be.revertedWith('EthereumTowers: must have admin role');
-    })
+      await expect(ethereumTowers.connect(testUser).changeRound(100, true))
+        .to.be.revertedWith('EthereumTowers: must have admin role');
+    });
 
     it("should add WHITELISTED role to stage 0", async function () {
       expect(await ethereumTowers.addStageRole(0, whitelistedRole));
-    })
+    });
 
     it("should restrict calling addStageRole to admin role only", async function () {
       const [_, testUser] = await ethers.getSigners();
 
-      await expect(
-        ethereumTowers.connect(testUser).addStageRole(0, whitelistedRole)
-      ).to.be.revertedWith('EthereumTowers: must have admin role');
-    })
+      await expect(ethereumTowers.connect(testUser).addStageRole(0, whitelistedRole))
+        .to.be.revertedWith('EthereumTowers: must have admin role');
+    });
 
     it("should get chain id", async function () {
       const network = await ethers.provider.getNetwork();
 
       expect(await ethereumTowers.getChainId()).to.equal(network.chainId);
-    })
+    });
 
     it("should grant roles using batchRoles", async function () {
       const wallets = Array.from({ length: 10 }, () => ethers.Wallet.createRandom().address);
@@ -121,90 +150,121 @@ describe("EthereumTower contract", function () {
       const expected = Array(10).fill(true);
 
       expect(walletRoles).to.deep.equal(expected);
-    })
+    });
 
     it("should restrict calling batchRoles to admin role only", async function () {
       const wallets = Array.from({ length: 10 }, () => ethers.Wallet.createRandom().address);
       const [_, testUser] = await ethers.getSigners();
 
-      await expect(
-        ethereumTowers.connect(testUser).batchRoles(wallets, whitelistedRole)
-      ).to.be.revertedWith('EthereumTowers: must have admin role');
-    })
+      await expect(ethereumTowers.connect(testUser).batchRoles(wallets, whitelistedRole))
+        .to.be.revertedWith('EthereumTowers: must have admin role');
+    });
 
     it("should revert get tokenURI for non-existing token", async function () {
-      await expect(
-        ethereumTowers.tokenURI(31337)
-      ).to.be.revertedWith("ERC721Metadata: URI query for nonexistent token");
-    })
+      await expect(ethereumTowers.tokenURI(31337))
+        .to.be.revertedWith("ERC721Metadata: URI query for nonexistent token");
+    });
 
     it("should revert updateTokenUrl for non-existing token", async function () {
-      const [_, testUser] = await ethers.getSigners();
-
-      await expect(
-        ethereumTowers.updateTokenUrl(313377, 'https://my.new.token.url')
-      ).to.be.revertedWith("");
-    })
+      await expect(ethereumTowers.updateTokenUrl(313377, 'https://my.new.token.url'))
+        .to.be.revertedWith("");
+    });
 
     it("should restrict calling updateTokenUrl to admin role only", async function () {
       const [_, testUser] = await ethers.getSigners();
 
-      await expect(
-        ethereumTowers.connect(testUser).updateTokenUrl(31337, 'https://my.new.token.url')
-      ).to.be.revertedWith("EthereumTowers: must have admin role");
-    })
-  })
+      await expect(ethereumTowers.connect(testUser).updateTokenUrl(31337, 'https://my.new.token.url'))
+        .to.be.revertedWith("EthereumTowers: must have admin role");
+    });
+  });
 
   describe("Ethereum Tower 1", function () {
     var contractFactory;
     var ethereumTowers;
+    var whitelistedRole;
 
     before(async () => {
       contractFactory = await ethers.getContractFactory(contractName);
       ethereumTowers = contractFactory.attach(towersContractAddress);
-    })
+      whitelistedRole = await ethereumTowers.WHITELISTED();
+    });
 
     it("should enable mint for Tower 1", async function () {
       await ethereumTowers.changeTower(1);
       let tower = await ethereumTowers.activeTower();
 
       expect(tower.toString()).to.equal("1");
-    })
+    });
 
-    it("should mint token with id 0 on Tower 1 for user with DEFAULT_ADMIN_ROLE", async function () {
-      const [_, testUser] = await ethers.getSigners()
-      let token = await ethereumTowers.mint(testUser.address, 0, '0x0') // Enable tower with number 1
-    })
+    it("should add WHITELISTED role to stage 101", async function () {
+      expect(await ethereumTowers.addStageRole(101, whitelistedRole));
+    });
 
-    it("should revert mint token with id 0 on Tower 1 for user with DEFAULT_ADMIN_ROLE", async function () {
-      const [deployer, testUser] = await ethers.getSigners()
-      const ET = await ethers.getContractFactory(contractName);
-      const ethereumTowers = await ET.attach(towersContractAddress)
-      // const errMessage = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("User can have only one of the towersContractAddress"))
-      await expect(ethereumTowers.mint(testUser.address, 0, '0x0')).to.be.revertedWith('User can have only one of the towersContractAddress');
-    })
+    it("should revert mint for not WHITELISTED addresses", async function () {
+      const [_, testUser9] = await ethers.getSigners();
+
+      await expect(ethereumTowers.connect(testUser9).mint(testUser9.address, 0, "0x0", 101))
+        .to.be.revertedWith("EthereumTowers: must have minter role to mint on this tower");
+    });
+
+    it("should mint token with id 0 on Tower 1 for WHITELISTED address", async function () {
+      const [_, testUser9] = await ethers.getSigners();
+
+      await ethereumTowers.batchRoles([testUser9.address], whitelistedRole);
+
+      expect(await ethereumTowers.connect(testUser9).mint(testUser9.address, 0, "0x0", 101));
+    });
 
     it("should get tokenUrl for token with id 0", async function () {
-      const [deployer, testUser, testUser2] = await ethers.getSigners()
-      const ET = await ethers.getContractFactory(contractName);
-      const ethereumTowers = await ET.attach(towersContractAddress)
-      // const errMessage = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("User can have only one of the towersContractAddress"))
-      // await expect(ethereumTowers.mint(testUser.address, 0, '0x0')).to.be.revertedWith('User can have only one of the towersContractAddress');
-      // console.log('-- Received token url: '.padStart(30) + url)
-      expect(await ethereumTowers.tokenURI(0)).to.equal("https://ipfs.io/ipfs/0x0")
-    })
+      expect(await ethereumTowers.tokenURI(0)).to.equal("https://ipfs.io/ipfs/0x0");
+    });
+
+    it("should mint token with id 1 on Tower 1 for WHITELISTED address and emit MintingInfo event", async function () {
+      const [_, testUser9] = await ethers.getSigners();
+
+      await ethereumTowers.changeStage(0, 1);
+
+      await expect(ethereumTowers.connect(testUser9).mint(testUser9.address, 1, "0x1", 101))
+        .to.emit(ethereumTowers, "MintingInfo")
+        .withArgs(testUser9.address, 1, "0x1", false, 0, 1);
+    });
+
     it("should mint new token for free for random user", async function () {
-      const [deployer, testUser] = await ethers.getSigners()
-      const ET = await ethers.getContractFactory(contractName);
-      const ethereumTowers = await ET.attach(towersContractAddress)
-      // const errMessage = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("User can have only one of the towersContractAddress"))
-      // await expect(ethereumTowers.mint(testUser.address, 0, '0x0')).to.be.revertedWith('User can have only one of the towersContractAddress');
-      // console.log('-- Received token url: '.padStart(30) + url)
-      const wallet = ethers.Wallet.createRandom()
-      expect(await ethereumTowers.connect(testUser).mint(wallet.address, 1, '0x0'))
-    })
-    //TODO: Add batch mint
-  })
+      const [_, testUser] = await ethers.getSigners();
+
+      await ethereumTowers.batchRoles([testUser.address], whitelistedRole);
+
+      const wallet = ethers.Wallet.createRandom();
+
+      expect(await ethereumTowers.connect(testUser).mint(wallet.address, 2, '0x2', 101));
+    });
+
+    it("should redeem token with id 3", async function () {
+      const [deployer, testUser6, testUser7] = await ethers.getSigners();
+
+      const voucher = await createAndSignVoucher(3, "https://ipfs.io/ipfs/0x3", ethereumTowers, deployer);
+
+      expect(await ethereumTowers.connect(testUser7).redeem(testUser6.address, voucher));
+    });
+
+    it("should revert redeem token with id 3 for address who already owns token", async function () {
+      const [deployer, testUser8] = await ethers.getSigners();
+
+      const voucher = await createAndSignVoucher(3, "https://ipfs.io/ipfs/0x3", ethereumTowers, deployer);
+
+      await expect(ethereumTowers.connect(testUser8).redeem(testUser8.address, voucher))
+        .to.be.revertedWith("User can have only one of the nft");
+    });
+
+    it("should revert redeem for unauthorized address", async function () {
+      const [deployer, testUser8, testUser9] = await ethers.getSigners();
+
+      const voucher = await createAndSignVoucher(4, "https://ipfs.io/ipfs/0x4", ethereumTowers, testUser9);
+
+      await expect(ethereumTowers.connect(deployer).redeem(testUser8.address, voucher))
+        .to.be.revertedWith("Signature invalid or unauthorized");
+    });
+  });
 
   describe("Ethereum Tower 2", function () {
     it("should enable mint for Tower 2 by admin", async function () {
