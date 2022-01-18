@@ -5,8 +5,11 @@
   "main": "index.js",
   "scripts": {
     "test": "npx hardhat --network ganache test",
-    "deploy-testnet": "npx hardhat run --network rinkeby scripts/test-deployment.js",
-    "deploy-testnet-2": "npx hardhat run --network rinkeby scripts/test-deployment-edited.js"
+    "deploy-testnet": "npx hardhat run --network rinkeby scripts/deployment.js",
+    "deploy-mainnet": "npx hardhat run --network mainnet scripts/deployment.js",
+    "generate:json": "npx hardhat run --network mainnet scripts/generateJson.js",
+    "deploy-testnet-airdrop": "npx hardhat run --network rinkeby scripts/test-deployment-airdrop.js",
+    "flatten:Tower": "npx hardhat flatten contracts/EthereumTower.sol > flattened_tower.sol --show-stack-traces"
   },
   "author": "Sergey Kononov",
   "license": "MIT",
@@ -24,6 +27,7 @@
     "@openzeppelin/contracts": "^4.4.1",
     "axios": "^0.24.0",
     "consola": "^2.15.3",
+    "crypto": "^1.0.1",
     "dotenv": "^10.0.0",
     "hardhat-tracer": "^1.0.0-alpha.6",
     "mongoose": "^6.1.3",

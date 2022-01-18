@@ -1,8 +1,8 @@
 require('dotenv').config()
 require('@nomiclabs/hardhat-ethers')
-require("@nomiclabs/hardhat-ganache")
-require("hardhat-tracer")
-require("@nomiclabs/hardhat-waffle")
+require('@nomiclabs/hardhat-ganache')
+require('hardhat-tracer')
+require('@nomiclabs/hardhat-waffle')
 
 const privateKey = process.env.DEPLOYER
 const privateKey1 = process.env.TEST_USER
@@ -24,13 +24,37 @@ module.exports = {
       url: 'https://rinkeby.infura.io/v3/9e349ff53f74485b8ee1ab71583f6c8e',
       gas: 2100000,
       gasPrice: 8000000000,
-      accounts: [privateKey, privateKey1, privateKey2, privateKey3, privateKey4, privateKey5, privateKey6, privateKey7, privateKey8, privateKey9, privateKey10],
+      accounts: [
+        privateKey,
+        privateKey1,
+        privateKey2,
+        privateKey3,
+        privateKey4,
+        privateKey5,
+        privateKey6,
+        privateKey7,
+        privateKey8,
+        privateKey9,
+        privateKey10,
+      ],
     },
     mainnet: {
       url: 'https://mainnet.infura.io/v3/9e349ff53f74485b8ee1ab71583f6c8e',
-      chainId: 56,
+      chainId: 1,
       gasPrice: 20000000000,
-      accounts: [privateKey],
+      accounts: [
+        privateKey,
+        privateKey1,
+        privateKey2,
+        privateKey3,
+        privateKey4,
+        privateKey5,
+        privateKey6,
+        privateKey7,
+        privateKey8,
+        privateKey9,
+        privateKey10,
+      ],
     },
   },
   solidity: {

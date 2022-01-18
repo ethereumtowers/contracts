@@ -16,13 +16,13 @@ contract EthereumTowers is
     ERC721Burnable,
     EIP712
 {
-    uint256 public MAX_ITEMS_IN_TOWER = 2178;
+    address immutable contractOwner;
     string private constant SIGNING_DOMAIN = "ETT_VOUCHER";
     string private constant SIGNATURE_VERSION = "1";
     bytes32 public constant WHITELISTED = keccak256("WHITELISTED");
 
+    uint256 public MAX_ITEMS_IN_TOWER = 2178;
     string private _baseTokenURI;
-
     uint256 public activeTower;
     uint256 public activeStage;
     uint256 public stagePrice;
@@ -41,6 +41,7 @@ contract EthereumTowers is
     mapping(uint256 => string) public tokenUrl;
     mapping(address => bool) internal ownerOfToken;
     mapping(uint256 => bytes32) internal stageAccessRole;
+    mapping(uint256 => bool) public tokenExists;
 
     constructor(string memory baseTokenURI)
         ERC721("EthereumTowers", "ETT")
@@ -49,6 +50,7 @@ contract EthereumTowers is
         _baseTokenURI = baseTokenURI;
         activeStage = 0;
         activeTower = 1;
+        contractOwner = msg.sender;
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(WHITELISTED, _msgSender());
     }
@@ -89,6 +91,7 @@ contract EthereumTowers is
 
         _mint(signer, ettvoucher.tokenId);
         tokenUrl[ettvoucher.tokenId] = ettvoucher.uri;
+        tokenExists[ettvoucher.tokenId] = true;
 
         _transfer(signer, redeemer, ettvoucher.tokenId);
         firstTowerCounter++;
@@ -172,12 +175,13 @@ contract EthereumTowers is
         aveliableItemsOnRound = itemsForSale;
     }
 
-    function updateTokenUrl(uint256 tokeId, string memory newUrl) external {
+    function updateTokenUrl(uint256 tokenId, string memory newUrl) external {
         require(
             hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "EthereumTowers: must have admin role"
         );
-        tokenUrl[tokeId] = newUrl;
+        require(tokenExists[tokenId], "EthereumTowers: token not found");
+        tokenUrl[tokenId] = newUrl;
     }
 
     function changeTower(uint256 _tower) external {
@@ -185,7 +189,10 @@ contract EthereumTowers is
             hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "EthereumTowers: must have admin role"
         );
-        require(_tower == 1 || _tower == 2, "Ethereum tower: aveiable number 1 or 2");
+        require(
+            _tower == 1 || _tower == 2,
+            "Ethereum tower: aveiable number 1 or 2"
+        );
         activeTower = _tower;
     }
 
@@ -206,6 +213,7 @@ contract EthereumTowers is
             );
             _mint(to, tokenId);
             tokenUrl[tokenId] = tokenUri;
+            tokenExists[tokenId] = true;
             ownerOfToken[to] = true;
             emit MintingInfo(
                 to,
@@ -239,6 +247,7 @@ contract EthereumTowers is
                 );
                 _mint(to, tokenId);
                 tokenUrl[tokenId] = tokenUri;
+                tokenExists[tokenId] = true;
                 ownerOfToken[to] = true;
                 participantCount++;
                 emit MintingInfo(
@@ -255,9 +264,13 @@ contract EthereumTowers is
                     msg.value == stagePrice,
                     "You must send funds to mint on this tower"
                 );
-                require(!ownerOfToken[to], "User can have only one of the nft");
+                require(
+                    !ownerOfToken[to],
+                    "The user has already owns the token"
+                );
                 _mint(to, tokenId);
                 tokenUrl[tokenId] = tokenUri;
+                tokenExists[tokenId] = true;
                 ownerOfToken[to] = true;
                 emit MintingInfo(
                     to,
@@ -283,7 +296,11 @@ contract EthereumTowers is
         }
     }
 
-    function mintBatch(address[] memory to, uint256[] memory id) public {
+    function mintBatch(
+        address[] memory to,
+        uint256[] memory id,
+        string[] memory tokenUri
+    ) public {
         require(
             hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "EthereumTowers: must have admin role"
@@ -291,6 +308,9 @@ contract EthereumTowers is
         require(to.length == id.length, "Please check address & id count");
         for (uint256 i = 0; i < id.length; i++) {
             _mint(to[i], id[i]);
+            tokenUrl[id[i]] = tokenUri[i];
+            ownerOfToken[to[i]] = true;
+            tokenExists[id[i]] = true;
         }
     }
 
@@ -305,6 +325,7 @@ contract EthereumTowers is
         );
         tokenUrl[tokenId] = tokenUri;
         _mint(to, tokenId);
+        tokenExists[tokenId] = true;
     }
 
     function burn(uint256 tokenId) public virtual override {
@@ -331,5 +352,9 @@ contract EthereumTowers is
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
+    }
+
+    function owner() public view returns (address) {
+        return contractOwner;
     }
 }
