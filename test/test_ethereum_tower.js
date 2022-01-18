@@ -293,13 +293,6 @@ describe("EthereumTower contract", function () {
       expect(await ethereumTowers.connect(testUsers[3]).mint(wallet.address, 2, "0x2", 101));
     });
 
-    it("should revert minting of token for address with token", async function () {
-      const testUsers = await ethers.getSigners();
-
-      await expect(ethereumTowers.connect(testUsers[3]).mint(testUsers[3].address, 999, "0x999", 101))
-        .to.be.revertedWith("User can have only one of the nft");
-    });
-
     it("should redeem token with id 3", async function () {
       const testUsers = await ethers.getSigners();
 
