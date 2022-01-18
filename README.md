@@ -12,7 +12,7 @@ IPFS: Latest IPFS node
 
 ```other
 cd ethereum-towers
-npm run install
+npm install
 docker-compose up -d
 
 docker-compose down #If you went off MongoDB
@@ -23,7 +23,7 @@ Use one of aveliable commands:
 Deployed contract on Rinkeby Ethereum network
 
 ```other
-0x2BaB3E7a922C5128721619bfC8D93b8063B376e5
+0xBe08EAC9E3aDb42C38b02438022C711fD39B9fd9
 ```
 
 **Aveliable commands:**
