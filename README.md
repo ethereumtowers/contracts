@@ -23,7 +23,7 @@ Use one of aveliable commands:
 Deployed contract on Rinkeby Ethereum network
 
 ```other
-0xBe08EAC9E3aDb42C38b02438022C711fD39B9fd9
+0x87C338D835e8624345B460FB8bAFB22911e590dF
 ```
 
 **Aveliable commands:**

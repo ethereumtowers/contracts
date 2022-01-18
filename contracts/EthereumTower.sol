@@ -43,10 +43,11 @@ contract EthereumTowers is
     mapping(uint256 => bytes32) internal stageAccessRole;
     mapping(uint256 => bool) public tokenExists;
 
-    constructor(string memory _baseCid)
+    constructor(string memory baseUri, string memory _baseCid)
         ERC721("EthereumTowers", "ETT")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-    {
+    {   
+        _baseTokenURI = baseUri;
         baseCid = _baseCid;
         activeStage = 0;
         activeTower = 1;
@@ -144,9 +145,10 @@ contract EthereumTowers is
         );
 
         string memory baseURI = _baseURI();
+        string memory id  = toString(tokenId);
         return
             bytes(baseURI).length > 0
-                ? string(abi.encodePacked(baseURI, baseCid, "/", tokenId,".json"))
+                ? string(abi.encodePacked(baseURI, baseCid, "/", id,".json"))
                 : "";
     }
 
@@ -342,5 +344,24 @@ contract EthereumTowers is
 
     function owner() public view returns (address) {
         return contractOwner;
+    }
+    function toString(uint256 value) internal pure returns (string memory) {
+
+        if (value == 0) {
+            return "0";
+        }
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
     }
 }
