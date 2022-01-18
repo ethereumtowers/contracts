@@ -3,7 +3,7 @@ const mongoose = require('mongoose')
 const Owner = require('../utils/models/ParsedTokens')
 const Prepared = require('../utils/models/PreparedTokens')
 const ipfs = require('nano-ipfs-store').at('https://ipfs.beeple.one')
-var nft
+
 async function Connect() {
   await mongoose
     .connect(
@@ -37,7 +37,7 @@ async function generateJson() {
       const doc = JSON.stringify(token)
       const cid = await ipfs.add(doc)
       console.log('IPFS cid:', cid)
-    //   console.log(await ipfs.cat(cid))
+      
       token.external_url = "https://ipfs.io/ipfs/" + cid
       await token.save()
 
