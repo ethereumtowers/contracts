@@ -43,7 +43,7 @@ async function createAndSignVoucher(tokenId, tokenUri, contract, signer) {
 describe("EthereumTower contract", function () {
   it("should deploy the new EthereumTower smart contract", async function () {
     const ET = await ethers.getContractFactory(contractName);
-    const ethereumTowers = await ET.deploy("https://ipfs.io/ipfs/");
+    const ethereumTowers = await ET.deploy("https://ipfs.io/ipfs/", "folder-cid");
 
     await ethereumTowers.deployed();
     towersContractAddress = ethereumTowers.address
@@ -60,6 +60,12 @@ describe("EthereumTower contract", function () {
       contractFactory = await ethers.getContractFactory(contractName);
       ethereumTowers = contractFactory.attach(towersContractAddress);
       whitelistedRole = await ethereumTowers.WHITELISTED();
+    });
+
+    it("should get contract owner address", async function() {
+      const testUsers = await ethers.getSigners();
+  
+      expect(await ethereumTowers.owner()).to.be.equal(testUsers[0].address);
     });
 
     it("should revert changeTower to unsupported tower", async function () {
@@ -166,18 +172,6 @@ describe("EthereumTower contract", function () {
         .to.be.revertedWith("ERC721Metadata: URI query for nonexistent token");
     });
 
-    it("should revert updateTokenUrl for non-existing token", async function () {
-      await expect(ethereumTowers.updateTokenUrl(313377, "https://my.new.token.url"))
-        .to.be.revertedWith("");
-    });
-
-    it("should restrict calling updateTokenUrl to admin role only", async function () {
-      const testUsers = await ethers.getSigners();
-
-      await expect(ethereumTowers.connect(testUsers[1]).updateTokenUrl(31337, "https://my.new.token.url"))
-        .to.be.revertedWith("EthereumTowers: must have admin role");
-    });
-
     it("should restrict calling mintBatch to admin role only", async function () {
       const testUsers = await ethers.getSigners();
 
@@ -206,14 +200,14 @@ describe("EthereumTower contract", function () {
     it("should restrict calling mintByAdmin to admin role only", async function () {
       const testUsers = await ethers.getSigners();
 
-      await expect(ethereumTowers.connect(testUsers[1]).mintByAdmin(testUsers[2].address, 10001, "0x2711"))
+      await expect(ethereumTowers.connect(testUsers[1]).mintByAdmin(testUsers[2].address, 10001))
         .to.be.revertedWith("EthereumTowers: must have admin role");
     });
 
     it("should mint token using mintByAdmin and emit events", async function () {
       const testUsers = await ethers.getSigners();
 
-      await expect(ethereumTowers.mintByAdmin(testUsers[2].address, 10001, "0x2711"))
+      await expect(ethereumTowers.mintByAdmin(testUsers[2].address, 10001))
         .to.emit(ethereumTowers, "Transfer")
         .withArgs("0x0000000000000000000000000000000000000000", testUsers[2].address, 10001);
     });
@@ -257,7 +251,7 @@ describe("EthereumTower contract", function () {
     it("should revert mint for not WHITELISTED addresses", async function () {
       const testUsers = await ethers.getSigners();
 
-      await expect(ethereumTowers.connect(testUsers[3]).mint(testUsers[3].address, 0, "0x0", 101))
+      await expect(ethereumTowers.connect(testUsers[3]).mint(testUsers[3].address, 0, 101))
         .to.be.revertedWith("EthereumTowers: must have minter role to mint on this tower");
     });
 
@@ -266,11 +260,17 @@ describe("EthereumTower contract", function () {
 
       await ethereumTowers.batchRoles([testUsers[3].address], whitelistedRole);
 
-      expect(await ethereumTowers.connect(testUsers[3]).mint(testUsers[3].address, 0, "0x0", 101));
+      expect(await ethereumTowers.connect(testUsers[3]).mint(testUsers[3].address, 0, 101));
     });
 
     it("should get tokenUrl for token with id 0", async function () {
-      expect(await ethereumTowers.tokenURI(0)).to.equal("https://ipfs.io/ipfs/0x0");
+      expect(await ethereumTowers.tokenURI(0)).to.equal("https://ipfs.io/ipfs/folder-cid/0.json");
+    });
+
+    it("should update baseCid in contract", async function () {
+      await ethereumTowers.updateBaseCid("new-base-cid");
+
+      expect(await ethereumTowers.tokenURI(0)).to.equal("https://ipfs.io/ipfs/new-base-cid/0.json");
     });
 
     it("should mint token with id 1 on Tower 1 for WHITELISTED address and emit events", async function () {
@@ -278,9 +278,9 @@ describe("EthereumTower contract", function () {
 
       await ethereumTowers.changeStage(0, ethers.utils.parseEther("1"));
 
-      await expect(ethereumTowers.connect(testUsers[3]).mint(testUsers[3].address, 1, "0x1", 101))
+      await expect(ethereumTowers.connect(testUsers[3]).mint(testUsers[3].address, 1, 101))
         .to.emit(ethereumTowers, "MintingInfo")
-        .withArgs(testUsers[3].address, 1, "0x1", false, 0, ethers.utils.parseEther("1"))
+        .withArgs(testUsers[3].address, 1, false, 0, ethers.utils.parseEther("1"))
         .and.to.emit(ethereumTowers, "Transfer")
         .withArgs("0x0000000000000000000000000000000000000000", testUsers[3].address, 1);
     });
@@ -290,7 +290,7 @@ describe("EthereumTower contract", function () {
 
       const wallet = ethers.Wallet.createRandom();
 
-      expect(await ethereumTowers.connect(testUsers[3]).mint(wallet.address, 2, "0x2", 101));
+      expect(await ethereumTowers.connect(testUsers[3]).mint(wallet.address, 2, 101));
     });
 
     it("should redeem token with id 3", async function () {
@@ -345,7 +345,7 @@ describe("EthereumTower contract", function () {
     it("should revert mint on incorrect stage", async function () {
       const testUsers = await ethers.getSigners();
 
-      await expect(ethereumTowers.connect(testUsers[4]).mint(testUsers[4].address, 199, "199", 10))
+      await expect(ethereumTowers.connect(testUsers[4]).mint(testUsers[4].address, 199, 10))
         .to.be.revertedWith("Incorrect stage");
     });
 
@@ -373,7 +373,7 @@ describe("EthereumTower contract", function () {
 
       const randomWallet = ethers.Wallet.createRandom();
 
-      await expect(ethereumTowers.connect(testUsers[4]).mint(randomWallet.address, 222, "0x222", 1))
+      await expect(ethereumTowers.connect(testUsers[4]).mint(randomWallet.address, 222, 1))
         .to.be.revertedWith("EthereumTowers: must have minter role to mint on this tower");
     });
 
@@ -384,7 +384,7 @@ describe("EthereumTower contract", function () {
 
       await ethereumTowers.addStageRole(1, whitelistedRole);
 
-      await expect(ethereumTowers.connect(testUsers[4]).mint(randomWallet.address, 222, "0x222", 1))
+      await expect(ethereumTowers.connect(testUsers[4]).mint(randomWallet.address, 222, 1))
         .to.be.revertedWith("You must send funds to mint on this tower");
     });
 
@@ -393,7 +393,7 @@ describe("EthereumTower contract", function () {
 
       const randomWallet = ethers.Wallet.createRandom();
 
-      expect(await ethereumTowers.connect(testUsers[4]).mint(randomWallet.address, 222, "0x222", 1, {
+      expect(await ethereumTowers.connect(testUsers[4]).mint(randomWallet.address, 222, 1, {
         value: ethers.utils.parseEther("0.2")
       }));
     });
@@ -403,11 +403,11 @@ describe("EthereumTower contract", function () {
 
       const randomWallet = ethers.Wallet.createRandom();
 
-      await ethereumTowers.connect(testUsers[4]).mint(randomWallet.address, 223, "0x223", 1, {
+      await ethereumTowers.connect(testUsers[4]).mint(randomWallet.address, 223, 1, {
         value: ethers.utils.parseEther("0.2")
       });
 
-      await expect(ethereumTowers.connect(testUsers[4]).mint(randomWallet.address, 224, "0x224", 1, {
+      await expect(ethereumTowers.connect(testUsers[4]).mint(randomWallet.address, 224, 1, {
         value: ethers.utils.parseEther("0.2")
       }))
         .to.be.revertedWith("User can have only one of the nft");
@@ -420,7 +420,7 @@ describe("EthereumTower contract", function () {
 
       await ethereumTowers.changeRound(1, true);
 
-      await expect(ethereumTowers.connect(testUsers[4]).mint(randomWallet.address, 334, "0x334", 1, {
+      await expect(ethereumTowers.connect(testUsers[4]).mint(randomWallet.address, 334, 1, {
         value: ethers.utils.parseEther("0.2")
       }))
         .to.be.revertedWith("Please wait for the next round to begin");
@@ -435,7 +435,7 @@ describe("EthereumTower contract", function () {
     it("should revert mint on public sale without sending 0.2 ETH", async function () {
       const testUsers = await ethers.getSigners();
 
-      await expect(ethereumTowers.connect(testUsers[5]).mint(testUsers[5].address, 444, "0x444", 1))
+      await expect(ethereumTowers.connect(testUsers[5]).mint(testUsers[5].address, 444, 1))
         .to.be.revertedWith("You must send funds to mint on this tower");
     });
 
@@ -444,7 +444,7 @@ describe("EthereumTower contract", function () {
 
       const randomWallet = ethers.Wallet.createRandom();
 
-      expect(await ethereumTowers.connect(testUsers[6]).mint(randomWallet.address, 555, "0x555", 1, {
+      expect(await ethereumTowers.connect(testUsers[6]).mint(randomWallet.address, 555, 1, {
         value: ethers.utils.parseEther("0.2", "ether")
       }));
     });
@@ -454,11 +454,11 @@ describe("EthereumTower contract", function () {
 
       const randomWallet = ethers.Wallet.createRandom();
 
-      await ethereumTowers.connect(testUsers[7]).mint(randomWallet.address, 777, "0x777", 1, {
+      await ethereumTowers.connect(testUsers[7]).mint(randomWallet.address, 777, 1, {
         value: ethers.utils.parseEther("0.2")
       });
 
-      await expect(ethereumTowers.connect(testUsers[7]).mint(randomWallet.address, 778, "0x778", 1, {
+      await expect(ethereumTowers.connect(testUsers[7]).mint(randomWallet.address, 778, 1, {
         value: ethers.utils.parseEther("0.2")
       }))
         .to.be.revertedWith("The user has already owns the token");
