@@ -32,6 +32,7 @@ contract EthereumTowers is
     uint256 public firstTowerCounter;
     uint256 public secondTowerCounter;
     string internal baseCid;
+    address payable projectAddress;
 
     struct EttVoucher {
         uint256 tokenId;
@@ -43,7 +44,7 @@ contract EthereumTowers is
     mapping(uint256 => bytes32) internal stageAccessRole;
     mapping(uint256 => bool) public tokenExists;
 
-    constructor(string memory baseUri, string memory _baseCid)
+    constructor(string memory baseUri, string memory _baseCid, address _projectAddress)
         ERC721("EthereumTowers", "ETT")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
     {   
@@ -52,6 +53,7 @@ contract EthereumTowers is
         activeStage = 0;
         activeTower = 1;
         contractOwner = msg.sender;
+        projectAddress = payable(_projectAddress);
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(WHITELISTED, _msgSender());
     }
@@ -155,6 +157,13 @@ contract EthereumTowers is
     function _baseURI() internal view virtual override returns (string memory) {
         return _baseTokenURI;
     }
+    function updateProjectAddress(address _newProjectAddress) public {
+                require(
+            hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
+            "EthereumTowers: must have admin role"
+        );
+        projectAddress = payable(_newProjectAddress);
+    }
 
     function changeStage(uint256 _stage, uint256 _stagePrice) external {
         require(
@@ -245,6 +254,7 @@ contract EthereumTowers is
                 tokenExists[tokenId] = true;
                 ownerOfToken[to] = true;
                 participantCount++;
+                projectAddress.transfer(msg.value);
                 emit MintingInfo(
                     to,
                     tokenId,

@@ -5,6 +5,7 @@ const directoryPath = path.join(__dirname, 'token_metadata')
 const mongoose = require('mongoose')
 const ParsedTokens = require('../utils/models/ParsedTokens')
 const PreparedTokens = require('../utils/models/PreparedTokens')
+const NotValidTokens = require('../utils/models/NotValidTokens')
 const MapedTokens = require('../utils/models/MapedTokens')
 async function Connect() {
   await mongoose
@@ -28,7 +29,6 @@ async function mapTokens() {
   let tokens = await PreparedTokens.find().lean()
   let addresses = []
   let ids = []
-
   tokens.forEach(function (token) {
     if (
       token.attributes.length === 4 &&
@@ -51,6 +51,16 @@ async function mapTokens() {
       console.log(tokenMapped)
       addresses.push(tokenMapped.owner)
       ids.push(tokenMapped.token_id)
+    } else {
+      new NotValidTokens({
+          token_id: token.token_id,
+          description: token.description,
+          external_url: token.external_url,
+          image: token.image,
+          name: token.name,
+          attributes: token.attributes,
+          owner: token.owner
+      }).save()
     }
   })
   console.log(addresses)
