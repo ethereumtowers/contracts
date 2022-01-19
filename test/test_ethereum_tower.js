@@ -461,7 +461,7 @@ describe("EthereumTower contract", function () {
       await expect(ethereumTowers.connect(testUsers[7]).mint(randomWallet.address, 778, "0x778", 1, {
         value: ethers.utils.parseEther("0.2")
       }))
-        .to.be.revertedWith("User can have only one of the nft");
+        .to.be.revertedWith("The user has already owns the token");
     });
   });
 });
