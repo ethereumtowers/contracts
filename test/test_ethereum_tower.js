@@ -42,8 +42,10 @@ async function createAndSignVoucher(tokenId, tokenUri, contract, signer) {
 
 describe("EthereumTower contract", function () {
   it("should deploy the new EthereumTower smart contract", async function () {
+    const testUsers = await ethers.getSigners();
+
     const ET = await ethers.getContractFactory(contractName);
-    const ethereumTowers = await ET.deploy("https://ipfs.io/ipfs/", "folder-cid");
+    const ethereumTowers = await ET.deploy("https://ipfs.io/ipfs/", "folder-cid", testUsers[8].address);
 
     await ethereumTowers.deployed();
     towersContractAddress = ethereumTowers.address
@@ -68,12 +70,22 @@ describe("EthereumTower contract", function () {
       expect(await ethereumTowers.owner()).to.be.equal(testUsers[0].address);
     });
 
-    it("should revert changeTower to unsupported tower", async function () {
-      const contractFactory = await ethers.getContractFactory(contractName);
-      const ethereumTowers = contractFactory.attach(towersContractAddress)
+    it("should restrict calling updateProjectAddress to admin role only", async function () {
+      const testUsers = await ethers.getSigners();
 
+      await expect(ethereumTowers.connect(testUsers[1]).updateProjectAddress(testUsers[2].address))
+        .to.be.revertedWith("EthereumTowers: must have admin role");
+    });
+
+    it("should change projectAddress by updateProjectAddress", async function() {
+      const testUsers = await ethers.getSigners();
+
+      expect(await ethereumTowers.updateProjectAddress(testUsers[8].address));
+    });
+
+    it("should revert changeTower to unsupported tower", async function () {
       await expect(ethereumTowers.changeTower(3))
-        .to.be.revertedWith("Ethereum tower: aveiable number 1 or 2");
+        .to.be.revertedWith("Ethereum tower: available number 1 or 2");
     });
 
     it("should restrict calling changeTower to admin role only", async function () {
@@ -104,7 +116,7 @@ describe("EthereumTower contract", function () {
       await ethereumTowers.changeRound(10, true);
 
       let isPrivateRound = await ethereumTowers.isPrivateRound();
-      let availableItemsOnRound = await ethereumTowers.aveliableItemsOnRound();
+      let availableItemsOnRound = await ethereumTowers.availableItemsOnRound();
 
       expect(isPrivateRound == true).to.be.true && expect(availableItemsOnRound == 10).to.be.true;
     });
@@ -113,7 +125,7 @@ describe("EthereumTower contract", function () {
       await ethereumTowers.changeRound(50, false);
 
       let isPrivateRound = await ethereumTowers.isPrivateRound();
-      let availableItemsOnRound = await ethereumTowers.aveliableItemsOnRound();
+      let availableItemsOnRound = await ethereumTowers.availableItemsOnRound();
 
       expect(isPrivateRound == false).to.be.true && expect(availableItemsOnRound == 50).to.be.true;
     });
