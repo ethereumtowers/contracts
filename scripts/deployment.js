@@ -6,7 +6,7 @@ async function main() {
     'Deployer: ' + deployer.address
   )
   const ET = await hre.ethers.getContractFactory('EthereumTowers')
-  const et = await ET.deploy('https://ipfs.io/ipfs/')
+  const et = await ET.deploy('https://ipfs.io/ipfs/', 'QmWt1RtuGxzZC53u3UidtP3zP68Z5UMNg3zHZ6kvtzCZ9Z')
   await et.deployed()
   console.log('Ethereum Towers deployed to:', et.address)
 }
