@@ -31,5 +31,5 @@ const tokenShema = new Schema({
     }
 })
 
-const TokenParsed = mongoose.model('parsedTokens', tokenShema)
+const TokenParsed = mongoose.model('parsedTokensAll', tokenShema)
 module.exports = TokenParsed

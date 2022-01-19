@@ -22,7 +22,7 @@ contract EthereumTowers is
     bytes32 public constant WHITELISTED = keccak256("WHITELISTED");
 
     uint256 public MAX_ITEMS_IN_TOWER = 2178;
-    string private _baseTokenURI;
+    string private _baseTokenURI = "https://ipfs.io/";
     uint256 public activeTower;
     uint256 public activeStage;
     uint256 public stagePrice;
@@ -31,6 +31,7 @@ contract EthereumTowers is
     uint256 public participantCount = 0;
     uint256 public firstTowerCounter;
     uint256 public secondTowerCounter;
+    string internal baseCid;
 
     struct EttVoucher {
         uint256 tokenId;
@@ -38,16 +39,16 @@ contract EthereumTowers is
         bytes signature;
     }
 
-    mapping(uint256 => string) public tokenUrl;
     mapping(address => bool) internal ownerOfToken;
     mapping(uint256 => bytes32) internal stageAccessRole;
     mapping(uint256 => bool) public tokenExists;
 
-    constructor(string memory baseTokenURI)
+    constructor(string memory baseUri, string memory _baseCid)
         ERC721("EthereumTowers", "ETT")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-    {
-        _baseTokenURI = baseTokenURI;
+    {   
+        _baseTokenURI = baseUri;
+        baseCid = _baseCid;
         activeStage = 0;
         activeTower = 1;
         contractOwner = msg.sender;
@@ -58,7 +59,6 @@ contract EthereumTowers is
     event MintingInfo(
         address to,
         uint256 tokenId,
-        string tokenUri,
         bool isPrivateRound,
         uint256 activeStage,
         uint256 stagePrice
@@ -90,7 +90,6 @@ contract EthereumTowers is
         require(activeTower == 1, "This phase has already ended!");
 
         _mint(signer, ettvoucher.tokenId);
-        tokenUrl[ettvoucher.tokenId] = ettvoucher.uri;
         tokenExists[ettvoucher.tokenId] = true;
 
         _transfer(signer, redeemer, ettvoucher.tokenId);
@@ -146,9 +145,10 @@ contract EthereumTowers is
         );
 
         string memory baseURI = _baseURI();
+        string memory id  = toString(tokenId);
         return
             bytes(baseURI).length > 0
-                ? string(abi.encodePacked(baseURI, tokenUrl[tokenId]))
+                ? string(abi.encodePacked(baseURI, baseCid, "/", id,".json"))
                 : "";
     }
 
@@ -175,13 +175,12 @@ contract EthereumTowers is
         aveliableItemsOnRound = itemsForSale;
     }
 
-    function updateTokenUrl(uint256 tokenId, string memory newUrl) external {
+    function updateBaseCid(string memory _baseCid) external {
         require(
             hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "EthereumTowers: must have admin role"
         );
-        require(tokenExists[tokenId], "EthereumTowers: token not found");
-        tokenUrl[tokenId] = newUrl;
+        baseCid = _baseCid;
     }
 
     function changeTower(uint256 _tower) external {
@@ -199,7 +198,6 @@ contract EthereumTowers is
     function mint(
         address to,
         uint256 tokenId,
-        string memory tokenUri,
         uint256 stage
     ) public payable virtual returns (uint256) {
         if (activeTower == 1) {
@@ -212,13 +210,11 @@ contract EthereumTowers is
                 "Max tokens on the contract has already minted"
             );
             _mint(to, tokenId);
-            tokenUrl[tokenId] = tokenUri;
             tokenExists[tokenId] = true;
             ownerOfToken[to] = true;
             emit MintingInfo(
                 to,
                 tokenId,
-                tokenUri,
                 isPrivateRound,
                 activeStage,
                 stagePrice
@@ -246,14 +242,12 @@ contract EthereumTowers is
                     "Please wait for the next round to begin"
                 );
                 _mint(to, tokenId);
-                tokenUrl[tokenId] = tokenUri;
                 tokenExists[tokenId] = true;
                 ownerOfToken[to] = true;
                 participantCount++;
                 emit MintingInfo(
                     to,
                     tokenId,
-                    tokenUri,
                     isPrivateRound,
                     activeStage,
                     stagePrice
@@ -269,13 +263,11 @@ contract EthereumTowers is
                     "The user has already owns the token"
                 );
                 _mint(to, tokenId);
-                tokenUrl[tokenId] = tokenUri;
                 tokenExists[tokenId] = true;
                 ownerOfToken[to] = true;
                 emit MintingInfo(
                     to,
                     tokenId,
-                    tokenUri,
                     isPrivateRound,
                     activeStage,
                     stagePrice
@@ -298,8 +290,7 @@ contract EthereumTowers is
 
     function mintBatch(
         address[] memory to,
-        uint256[] memory id,
-        string[] memory tokenUri
+        uint256[] memory id
     ) public {
         require(
             hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
@@ -308,7 +299,6 @@ contract EthereumTowers is
         require(to.length == id.length, "Please check address & id count");
         for (uint256 i = 0; i < id.length; i++) {
             _mint(to[i], id[i]);
-            tokenUrl[id[i]] = tokenUri[i];
             ownerOfToken[to[i]] = true;
             tokenExists[id[i]] = true;
         }
@@ -316,14 +306,12 @@ contract EthereumTowers is
 
     function mintByAdmin(
         address to,
-        uint256 tokenId,
-        string memory tokenUri
+        uint256 tokenId
     ) public {
         require(
             hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "EthereumTowers: must have admin role"
         );
-        tokenUrl[tokenId] = tokenUri;
         _mint(to, tokenId);
         tokenExists[tokenId] = true;
     }
@@ -356,5 +344,24 @@ contract EthereumTowers is
 
     function owner() public view returns (address) {
         return contractOwner;
+    }
+    function toString(uint256 value) internal pure returns (string memory) {
+
+        if (value == 0) {
+            return "0";
+        }
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
     }
 }

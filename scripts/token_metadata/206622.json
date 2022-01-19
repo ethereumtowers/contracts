@@ -1,0 +1,24 @@
+{
+    "name": "Apt #22 - Floor #66 - Tower #2",
+    "description": "Apt #22 - Floor #66 - Tower #2 - Luxury",
+    "image": "https://ethtowersimages.s3.us-east-2.amazonaws.com/ethereum-towers-cards-test/206622.png",
+    "external_url": "https://discord.gg/ethereumtowers",
+    "attributes": [
+        {
+            "trait_type": "Apartment",
+            "value": 22
+        },
+        {
+            "trait_type": "Floor",
+            "value": 66
+        },
+        {
+            "trait_type": "Type",
+            "value": "Luxury"
+        },
+        {
+            "trait_type": "Tower",
+            "value": 2
+        }
+    ]
+}
