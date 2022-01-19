@@ -336,11 +336,15 @@ describe("EthereumTower contract", function () {
     var contractFactory;
     var ethereumTowers;
     var whitelistedRole;
+    var projectAddress;
 
     before(async () => {
       contractFactory = await ethers.getContractFactory(contractName);
       ethereumTowers = contractFactory.attach(towersContractAddress);
       whitelistedRole = await ethereumTowers.WHITELISTED();
+
+      const testUsers = await ethers.getSigners();
+      projectAddress = testUsers[8].address;
 
       await ethereumTowers.changeStage(5, ethers.utils.parseEther("1", "ether"));
       await ethereumTowers.changeRound(100, true);
@@ -408,6 +412,21 @@ describe("EthereumTower contract", function () {
       expect(await ethereumTowers.connect(testUsers[4]).mint(randomWallet.address, 222, 1, {
         value: ethers.utils.parseEther("0.2")
       }));
+    });
+
+    it("should transfer 0.2 ETH to projectAddress on mint in private sale round", async function() {
+      const testUsers = await ethers.getSigners();
+      const randomWallet = ethers.Wallet.createRandom();
+
+      const balanceBefore = await ethers.provider.getBalance(projectAddress);
+
+      await ethereumTowers.connect(testUsers[4]).mint(randomWallet.address, 888, 1, {
+        value: ethers.utils.parseEther("0.2")
+      });
+
+      const balanceAfter = await ethers.provider.getBalance(projectAddress);
+
+      expect(balanceAfter == balanceBefore + ethers.utils.parseEther("0.2"));
     });
 
     it("should revert mint new token for address that already has a token", async function () {
