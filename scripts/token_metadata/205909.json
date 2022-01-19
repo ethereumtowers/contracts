@@ -1,0 +1,24 @@
+{
+    "name": "Apt #9 - Floor #59 - Tower #2",
+    "description": "Apt #9 - Floor #59 - Tower #2 - Standard",
+    "image": "https://ethtowersimages.s3.us-east-2.amazonaws.com/ethereum-towers-cards-test/205909.png",
+    "external_url": "https://discord.gg/ethereumtowers",
+    "attributes": [
+        {
+            "trait_type": "Apartment",
+            "value": 9
+        },
+        {
+            "trait_type": "Floor",
+            "value": 59
+        },
+        {
+            "trait_type": "Type",
+            "value": "Standard"
+        },
+        {
+            "trait_type": "Tower",
+            "value": 2
+        }
+    ]
+}

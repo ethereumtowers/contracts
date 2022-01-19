@@ -1,0 +1,24 @@
+{
+    "name": "Apt #1 - Floor #100 - Tower #2",
+    "description": "Apt #1 - Floor #100 - Tower #2 - Penthouse",
+    "image": "https://ethtowersimages.s3.us-east-2.amazonaws.com/ethereum-towers-cards-test/210001.png",
+    "external_url": "https://discord.gg/ethereumtowers",
+    "attributes": [
+        {
+            "trait_type": "Apartment",
+            "value": 1
+        },
+        {
+            "trait_type": "Floor",
+            "value": 100
+        },
+        {
+            "trait_type": "Type",
+            "value": "Penthouse"
+        },
+        {
+            "trait_type": "Tower",
+            "value": 2
+        }
+    ]
+}
