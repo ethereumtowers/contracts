@@ -254,7 +254,6 @@ contract EthereumTowers is
                 tokenExists[tokenId] = true;
                 ownerOfToken[to] = true;
                 participantCount++;
-                projectAddress.transfer(msg.value);
                 emit MintingInfo(
                     to,
                     tokenId,
@@ -262,6 +261,7 @@ contract EthereumTowers is
                     activeStage,
                     stagePrice
                 );
+                projectAddress.transfer(msg.value);
                 return tokenId;
             } else {
                 require(
@@ -275,6 +275,7 @@ contract EthereumTowers is
                 _mint(to, tokenId);
                 tokenExists[tokenId] = true;
                 ownerOfToken[to] = true;
+                projectAddress.transfer(msg.value);
                 emit MintingInfo(
                     to,
                     tokenId,
