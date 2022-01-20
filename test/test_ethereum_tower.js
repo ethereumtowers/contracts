@@ -427,6 +427,20 @@ describe("EthereumTower contract", function () {
       }));
     });
 
+    it("should transfer 0.2 ETH to projectAddress on mint in public sale round", async function() {
+      const randomWallet = ethers.Wallet.createRandom();
+
+      const balanceBefore = await ethers.provider.getBalance(projectAddress);
+
+      await ethereumTowers.connect(testUsers[4]).mint(randomWallet.address, 101010, 1, {
+        value: ethers.utils.parseEther("0.2")
+      });
+
+      const balanceAfter = await ethers.provider.getBalance(projectAddress);
+
+      expect(balanceAfter == balanceBefore + ethers.utils.parseEther("0.2"));
+    });
+
     it("should revert mint of new token on public sale for address that already has a token", async function () {
       const randomWallet = ethers.Wallet.createRandom();
 
