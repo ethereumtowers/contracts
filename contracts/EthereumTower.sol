@@ -27,11 +27,12 @@ contract EthereumTowers is
     uint256 public activeStage;
     uint256 public stagePrice;
     bool public isPrivateRound;
-    uint256 public aveliableItemsOnRound;
+    uint256 public availableItemsOnRound;
     uint256 public participantCount = 0;
     uint256 public firstTowerCounter;
     uint256 public secondTowerCounter;
     string internal baseCid;
+    address payable projectAddress;
 
     struct EttVoucher {
         uint256 tokenId;
@@ -43,15 +44,20 @@ contract EthereumTowers is
     mapping(uint256 => bytes32) internal stageAccessRole;
     mapping(uint256 => bool) public tokenExists;
 
-    constructor(string memory baseUri, string memory _baseCid)
+    constructor(
+        string memory baseUri,
+        string memory _baseCid,
+        address _projectAddress
+    )
         ERC721("EthereumTowers", "ETT")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-    {   
+    {
         _baseTokenURI = baseUri;
         baseCid = _baseCid;
         activeStage = 0;
         activeTower = 1;
         contractOwner = msg.sender;
+        projectAddress = payable(_projectAddress);
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(WHITELISTED, _msgSender());
     }
@@ -145,15 +151,23 @@ contract EthereumTowers is
         );
 
         string memory baseURI = _baseURI();
-        string memory id  = toString(tokenId);
+        string memory id = toString(tokenId);
         return
             bytes(baseURI).length > 0
-                ? string(abi.encodePacked(baseURI, baseCid, "/", id,".json"))
+                ? string(abi.encodePacked(baseURI, baseCid, "/", id, ".json"))
                 : "";
     }
 
     function _baseURI() internal view virtual override returns (string memory) {
         return _baseTokenURI;
+    }
+
+    function updateProjectAddress(address _newProjectAddress) public {
+        require(
+            hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
+            "EthereumTowers: must have admin role"
+        );
+        projectAddress = payable(_newProjectAddress);
     }
 
     function changeStage(uint256 _stage, uint256 _stagePrice) external {
@@ -172,7 +186,7 @@ contract EthereumTowers is
             "EthereumTowers: must have admin role"
         );
         isPrivateRound = privateRound;
-        aveliableItemsOnRound = itemsForSale;
+        availableItemsOnRound = itemsForSale;
     }
 
     function updateBaseCid(string memory _baseCid) external {
@@ -190,7 +204,7 @@ contract EthereumTowers is
         );
         require(
             _tower == 1 || _tower == 2,
-            "Ethereum tower: aveiable number 1 or 2"
+            "Ethereum tower: available number 1 or 2"
         );
         activeTower = _tower;
     }
@@ -238,7 +252,7 @@ contract EthereumTowers is
                 );
                 require(!ownerOfToken[to], "User can have only one of the nft");
                 require(
-                    participantCount < aveliableItemsOnRound,
+                    participantCount < availableItemsOnRound,
                     "Please wait for the next round to begin"
                 );
                 _mint(to, tokenId);
@@ -252,6 +266,7 @@ contract EthereumTowers is
                     activeStage,
                     stagePrice
                 );
+                projectAddress.transfer(msg.value);
                 return tokenId;
             } else {
                 require(
@@ -265,6 +280,7 @@ contract EthereumTowers is
                 _mint(to, tokenId);
                 tokenExists[tokenId] = true;
                 ownerOfToken[to] = true;
+                projectAddress.transfer(msg.value);
                 emit MintingInfo(
                     to,
                     tokenId,
@@ -288,10 +304,7 @@ contract EthereumTowers is
         }
     }
 
-    function mintBatch(
-        address[] memory to,
-        uint256[] memory id
-    ) public {
+    function mintBatch(address[] memory to, uint256[] memory id) public {
         require(
             hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "EthereumTowers: must have admin role"
@@ -304,10 +317,7 @@ contract EthereumTowers is
         }
     }
 
-    function mintByAdmin(
-        address to,
-        uint256 tokenId
-    ) public {
+    function mintByAdmin(address to, uint256 tokenId) public {
         require(
             hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "EthereumTowers: must have admin role"
@@ -345,8 +355,8 @@ contract EthereumTowers is
     function owner() public view returns (address) {
         return contractOwner;
     }
-    function toString(uint256 value) internal pure returns (string memory) {
 
+    function toString(uint256 value) internal pure returns (string memory) {
         if (value == 0) {
             return "0";
         }
