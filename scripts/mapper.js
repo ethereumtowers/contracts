@@ -29,7 +29,7 @@ async function mapTokens() {
   let tokens = await PreparedTokens.find().lean()
   let addresses = []
   let ids = []
-  tokens.forEach(function (token) {
+  tokens.forEach(async function (token) {
     if (
       token.attributes.length === 4 &&
       token.attributes[2].trait_type === 'Apartment' &&
@@ -47,10 +47,36 @@ async function mapTokens() {
       let tokenMapped = new MapedTokens({
         token_id: tower + floorPadded + apartmentPadded,
         owner: token.owner,
+        token_id_old: token.token_id,
+        description: token.description
       })
-      console.log(tokenMapped)
+      await tokenMapped.save()
       addresses.push(tokenMapped.owner)
       ids.push(tokenMapped.token_id)
+      const limit = 50
+      let filesCount = tokens.length / limit
+      for (let i = 1; i < filesCount; i++) {
+        let page = i
+        let startIndex = (page - 1) * limit
+        let endIndex = page * limit
+        let decomposited = addresses.slice(startIndex, endIndex)
+        // console.log(`ADDRESSES ${i}`, decomposited)
+        fs.writeFile(`addresses_${i}.txt`, decomposited.toString(), function (err) {
+          if (err) return console.log(err)
+          console.log(`Addresses_${i} > addresses${i}.txt`)
+        })
+      }
+      for (let i = 1; i < filesCount; i++) {
+        let page = i
+        let startIndex = (page - 1) * limit
+        let endIndex = page * limit
+        let decomposited = ids.slice(startIndex, endIndex)
+        // console.log(`IDS ${i}`, decomposited)
+        fs.writeFile(`ids_${i}.txt`, decomposited.toString(), function (err) {
+          if (err) return console.log(err)
+          console.log(`ids_${i} > ids${i}.txt`)
+        })
+      }
     } else {
       new NotValidTokens({
           token_id: token.token_id,
@@ -63,30 +89,6 @@ async function mapTokens() {
       }).save()
     }
   })
-  console.log(addresses)
-  let filesCount = tokens.length / 100
-  for (let i = 1; i < filesCount; i++) {
-    let page = i
-    let limit = 100
-    let startIndex = (page - 1) * limit
-    let endIndex = page * limit
-    let decomposited = addresses.slice(startIndex, endIndex)
-    fs.writeFile(`addresses_${i}.txt`, decomposited.toString(), function (err) {
-      if (err) return console.log(err)
-      console.log(`Addresses_${i} > addresses${i}.txt`)
-    })
-  }
-  for (let i = 1; i < filesCount; i++) {
-    let page = i
-    let limit = 100
-    let startIndex = (page - 1) * limit
-    let endIndex = page * limit
-    let decomposited = ids.slice(startIndex, endIndex)
-    fs.writeFile(`ids_${i}.txt`, decomposited.toString(), function (err) {
-      if (err) return console.log(err)
-      console.log(`ids_${i} > ids${i}.txt`)
-    })
-  }
 }
 mapTokens()
 function Padder(len, pad) {

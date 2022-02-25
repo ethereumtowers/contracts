@@ -3,6 +3,7 @@ require('@nomiclabs/hardhat-ethers')
 require('@nomiclabs/hardhat-ganache')
 require('hardhat-tracer')
 require('@nomiclabs/hardhat-waffle')
+require("@nomiclabs/hardhat-etherscan");
 
 const privateKey = process.env.DEPLOYER
 const privateKey1 = process.env.TEST_USER
@@ -17,13 +18,29 @@ const privateKey9 = process.env.TEST_USER_9
 const privateKey10 = process.env.TEST_USER_10
 
 module.exports = {
-  defaultNetwork: 'rinkeby',
+  defaultNetwork: 'ropsten',
   networks: {
     hardhat: {},
+    ropsten: {
+      url: 'https://eth-ropsten.alchemyapi.io/v2/NBpktksmgExwiNqsVSmdd6DQMs12MIKb',
+      gasPrice: 100000000000,
+      accounts: [
+        privateKey,
+        privateKey1,
+        privateKey2,
+        privateKey3,
+        privateKey4,
+        privateKey5,
+        privateKey6,
+        privateKey7,
+        privateKey8,
+        privateKey9,
+        privateKey10,
+      ],
+    },
     rinkeby: {
-      url: 'https://rinkeby.infura.io/v3/9e349ff53f74485b8ee1ab71583f6c8e',
-      gas: 2100000,
-      gasPrice: 8000000000,
+      url: 'https://eth-rinkeby.alchemyapi.io/v2/Calfh4vN8SEuP2Es5wK8OyZmqdAKZ2zU',
+      gasPrice: 100000000000,
       accounts: [
         privateKey,
         privateKey1,
@@ -41,7 +58,7 @@ module.exports = {
     mainnet: {
       url: 'https://mainnet.infura.io/v3/9e349ff53f74485b8ee1ab71583f6c8e',
       chainId: 1,
-      gasPrice: 20000000000,
+      gasPrice: 20000000000, //Change to 8000000000
       accounts: [
         privateKey,
         privateKey1,
@@ -56,6 +73,9 @@ module.exports = {
         privateKey10,
       ],
     },
+  },
+  etherscan: {
+    apiKey: process.env.SCAN_API_KEY
   },
   solidity: {
     version: '0.8.9',

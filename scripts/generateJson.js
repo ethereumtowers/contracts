@@ -34,12 +34,7 @@ async function generateJson() {
       attributes: tokens[i].traits,
       owner: tokens[i].ownerAddress,
     })
-      const doc = JSON.stringify(token)
-      const cid = await ipfs.add(doc)
-      console.log('IPFS cid:', cid)
-      
-      token.external_url = "https://ipfs.io/ipfs/" + cid
-      await token.save()
+    await token.save()
 
   }
 }

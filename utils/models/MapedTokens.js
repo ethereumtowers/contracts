@@ -7,8 +7,11 @@ const tokenShema = new Schema({
     },
     owner: {
         type: String
-    }
+    },
+    token_id_old: String,
+    description: String,
 })
 
 const MapedTokens = mongoose.model('mapedTokens', tokenShema)
 module.exports = MapedTokens
+
