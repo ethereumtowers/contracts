@@ -1,7 +1,5 @@
+//SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
-import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./EthereumTower.sol";
@@ -9,14 +7,14 @@ import "./EthereumTower.sol";
 contract TowersProxy is EIP712 {
     string private constant SIGNING_DOMAIN = "EthereumTower";
     string private constant SIGNATURE_VERSION = "1";
-    uint256 public MAX_ITEMS_IN_TOWER = 36; //Max token count on tower 2
-    address payable feeAddress; //Fee address
-    bool isActive = true; //Smart contract status
-    address serviceAddress; //Backend signer address
+    uint256 public MAX_ITEMS_IN_TOWER = 50; //Max token count on tower 2
+    address payable public feeAddress; //Fee address
+    bool public isActive = true; //Smart contract status
+    address public serviceAddress; //Backend signer address
 
-    address TowersContract; //Ethereum tower main contract
+    address public TowersContract; //Ethereum tower main contract
     address contractOwner; //Contract deployer
-    uint256 currentStage; //Current stage setted on addStageRole
+    uint256 public currentStage; //Current stage setted on addStageRole
     uint256 public tokenCount = 34; //Minted on tower 2 tokens
 
     mapping(uint256 => bytes32) public currentStageRole;
