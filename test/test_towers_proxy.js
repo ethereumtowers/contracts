@@ -55,7 +55,7 @@ describe("TowersProxy contract", function () {
     await ethereumTowers.changeTower(2);
 
     const proxyContractFactory = await ethers.getContractFactory(ettProxyContractName);
-    const proxyContract = await proxyContractFactory.deploy(ettContractAddress, feeAddress, serviceAddress);
+    const proxyContract = await proxyContractFactory.deploy(ettContractAddress, serviceAddress);
     await proxyContract.deployed();
 
     ettProxyContractAddress = proxyContract.address;
@@ -70,9 +70,6 @@ describe("TowersProxy contract", function () {
 
     var serviceAccount;
     var newServiceAccount;
-
-    var feeAddress;
-    var newFeeAddress;
 
     var whitelistedRole;
     var testRole;
@@ -92,9 +89,6 @@ describe("TowersProxy contract", function () {
 
       serviceAccount = testUsers[2];
       newServiceAccount = testUsers[8];
-
-      feeAddress = testUsers[1].address;
-      newFeeAddress = testUsers[2].address;
     });
 
     it("should grant admin role to TowersProxy contract", async function () {
@@ -113,52 +107,47 @@ describe("TowersProxy contract", function () {
 
     it("should restrict calling addRoleForStage to owner only", async function () {
       await expect(ettProxyContract.connect(testUsers[1]).addRoleForStage(1, whitelistedRole))
-        .to.be.revertedWith("You are not a contract owner");
+        .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("should restrict calling resetOwnerOf to owner only", async function () {
       await expect(ettProxyContract.connect(testUsers[1]).resetOwnerOf(testUsers[10].address))
-        .to.be.revertedWith("You are not a contract owner");
+        .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("should restrict calling resetTokenCount to owner only", async function () {
       await expect(ettProxyContract.connect(testUsers[1]).resetTokenCount(0))
-        .to.be.revertedWith("You are not a contract owner");
+        .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("should restrict calling disableContract to owner only", async function () {
       await expect(ettProxyContract.connect(testUsers[1]).disableContract())
-        .to.be.revertedWith("You are not a contract owner");
+        .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("should restrict calling enableContract to owner only", async function () {
       await expect(ettProxyContract.connect(testUsers[1]).enableContract())
-        .to.be.revertedWith("You are not a contract owner");
+        .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("should restrict calling addToBlacklist to owner only", async function () {
       await expect(ettProxyContract.connect(testUsers[1]).addToBlacklist(testUsers[10].address))
-        .to.be.revertedWith("You are not a contract owner");
+        .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("should restrict calling removeFromBlacklist to owner only", async function () {
       await expect(ettProxyContract.connect(testUsers[1]).removeFromBlacklist(testUsers[10].address))
-        .to.be.revertedWith("You are not a contract owner");
+        .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("should restrict calling changeServiceAddress to owner only", async function () {
       await expect(ettProxyContract.connect(testUsers[1]).changeServiceAddress(testUsers[10].address))
-        .to.be.revertedWith("You are not a contract owner");
+        .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
-    it("should restrict calling changeFeeAddress to owner only", async function () {
-      await expect(ettProxyContract.connect(testUsers[1]).changeFeeAddress(testUsers[10].address))
-        .to.be.revertedWith("You are not a contract owner");
-    });
-
-    it("should restrict calling changeTowerContract to owner only", async function () {
-      await expect(ettProxyContract.connect(testUsers[1]).changeTowerContract(testUsers[10].address))
-        .to.be.revertedWith("You are not a contract owner");
+    it("should restrict calling withdraw to owner only", async function () {
+      await expect(ettProxyContract.connect(testUsers[1]).withdraw(ethers.utils.parseEther("0.1")))
+        .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("should reset token count", async function () {
@@ -172,20 +161,55 @@ describe("TowersProxy contract", function () {
       expect(await ettProxyContract.addRoleForStage(0, whitelistedRole));
     });
 
-    it("should redeem token and transfer fee", async function () {
+    it("should redeem token and transfer ETH to contract", async function () {
       const redeemer = testUsers[5];
       const tokenId = 0;
       const sendValue = ethers.utils.parseEther("1");
       const voucher = await createAndSignVoucher(tokenId, ettProxyContract, serviceAccount);
 
-      let feeBalanceBefore = await ethers.provider.getBalance(feeAddress);
+      let contractBalanceBefore = await ethers.provider.getBalance(ettProxyContract.address);
 
       await ettProxyContract.connect(redeemer).redeem(voucher, { value: sendValue });
 
-      let feeBalanceAfter = await ethers.provider.getBalance(feeAddress);
+      let contractBalanceAfter = await ethers.provider.getBalance(ettProxyContract.address);
 
       expect(await ettContract.ownerOf(tokenId)).to.be.equal(redeemer.address)
-        && expect(feeBalanceAfter).to.be.equal(feeBalanceBefore.add(sendValue));
+        && expect(contractBalanceAfter).to.be.equal(contractBalanceBefore.add(sendValue));
+    });
+
+    it("should get withdrawable ETH balance from contract", async function () {
+      let contractBalance = await ethers.provider.getBalance(ettProxyContract.address);
+
+      expect(await ettProxyContract.withdrawableBalance()).to.be.equal(contractBalance);
+    });
+
+    it("should revert withdraw ETH for insufficient funds amount", async function () {
+      let contractBalance = await ethers.provider.getBalance(ettProxyContract.address);
+      let withdrawAmount = contractBalance.add(ethers.utils.parseEther('0.1'));
+
+      await expect(ettProxyContract.withdraw(withdrawAmount))
+        .to.be.revertedWith("Insufficient funds to withdraw");
+    });
+
+    it("should withdraw ETH from contract", async function () {
+      let withdrawAmount = await ethers.provider.getBalance(ettProxyContract.address);
+      let ownerBalanceBefore = await ethers.provider.getBalance(testUsers[0].address);
+
+      console.log(testUsers[0].address);
+      console.log(await ettProxyContract.owner());
+
+      console.log(withdrawAmount);
+      console.log(ownerBalanceBefore);
+
+      await ettProxyContract.withdraw(withdrawAmount);
+
+      let ownerBalanceAfter = await ethers.provider.getBalance(testUsers[0].address);
+
+      console.log(ownerBalanceBefore);
+      console.log(await ettProxyContract.withdrawableBalance());
+
+      expect(await ettProxyContract.connect(testUsers[1]).withdrawableBalance()).to.be.equal(ethers.utils.parseEther('0'))
+        && expect(ownerBalanceAfter).to.be.equal(ownerBalanceBefore.add(withdrawAmount));
     });
 
     it("should revert redeem of the same token twice", async function () {
@@ -223,7 +247,7 @@ describe("TowersProxy contract", function () {
       )).to.be.revertedWith("Signature not valid");
     });
 
-    it("should revert redeem incorrect msg.value", async function () {
+    it("should revert redeem with insufficient msg.value", async function () {
       const redeemer = testUsers[6];
       const tokenId = 1;
 
@@ -238,7 +262,7 @@ describe("TowersProxy contract", function () {
       )).to.be.revertedWith("The price is incorrect");
     });
 
-    it("shoild disable contract", async function () {
+    it("should disable contract", async function () {
       expect(await ettProxyContract.disableContract());
     });
 
@@ -332,29 +356,6 @@ describe("TowersProxy contract", function () {
         voucher,
         { value: ethers.utils.parseEther("1") }
       ));
-    });
-
-    it("should change fee address", async function () {
-      expect(await ettProxyContract.changeFeeAddress(newFeeAddress));
-    });
-
-    it("should redeem token and transfer fee to new address", async function () {
-      const redeemer = testUsers[17];
-      const tokenId = 170;
-      const sendValue = ethers.utils.parseEther("1");
-      const voucher = await createAndSignVoucher(tokenId, ettProxyContract, newServiceAccount);
-
-      let oldFeeBalanceBefore = await ethers.provider.getBalance(feeAddress);
-      let newFeeBalanceBefore = await ethers.provider.getBalance(newFeeAddress);
-
-      await ettProxyContract.connect(redeemer).redeem(voucher, { value: sendValue });
-
-      let oldFeeBalanceAfter = await ethers.provider.getBalance(feeAddress);
-      let newFeeBalanceAfter = await ethers.provider.getBalance(newFeeAddress);
-
-      expect(await ettContract.ownerOf(tokenId)).to.be.equal(redeemer.address)
-        && expect(oldFeeBalanceBefore).to.be.equal(oldFeeBalanceAfter)
-        && expect(newFeeBalanceAfter).to.be.equal(newFeeBalanceBefore.add(sendValue));
     });
 
     it("should revert redeem for not allowed role on private sale", async function () {
