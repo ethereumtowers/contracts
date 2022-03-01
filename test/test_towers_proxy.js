@@ -130,16 +130,6 @@ describe("TowersProxy contract", function () {
         .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
-    it("should restrict calling addToBlacklist to owner only", async function () {
-      await expect(ettProxyContract.connect(testUsers[1]).addToBlacklist(testUsers[10].address))
-        .to.be.revertedWith("Ownable: caller is not the owner");
-    });
-
-    it("should restrict calling removeFromBlacklist to owner only", async function () {
-      await expect(ettProxyContract.connect(testUsers[1]).removeFromBlacklist(testUsers[10].address))
-        .to.be.revertedWith("Ownable: caller is not the owner");
-    });
-
     it("should restrict calling changeServiceAddress to owner only", async function () {
       await expect(ettProxyContract.connect(testUsers[1]).changeServiceAddress(testUsers[10].address))
         .to.be.revertedWith("Ownable: caller is not the owner");
@@ -277,34 +267,6 @@ describe("TowersProxy contract", function () {
       const voucher = await createAndSignVoucher(10, ettProxyContract, serviceAccount);
 
       expect(await ettProxyContract.connect(testUsers[11]).redeem(
-        voucher,
-        { value: ethers.utils.parseEther("1") }
-      ));
-    });
-
-    it("should add address to blacklist", async function () {
-      expect(await ettProxyContract.addToBlacklist(testUsers[15].address));
-    });
-
-    it("should revert redeem for blacklisted address", async function () {
-      const voucher = await createAndSignVoucher(11, ettProxyContract, serviceAccount);
-
-      await expect(ettProxyContract.connect(testUsers[15]).redeem(
-        voucher,
-        { value: ethers.utils.parseEther("1") }
-      )).to.be.revertedWith("Your wallet address is already banned by the Administrator");
-    });
-
-    it("should remove address from blacklist", async function () {
-      expect(await ettProxyContract.removeFromBlacklist(testUsers[15].address));
-    });
-
-    it("should allow redeem for address, removed from blacklist", async function () {
-      await ettProxyContract.enableContract();
-
-      const voucher = await createAndSignVoucher(12, ettProxyContract, serviceAccount);
-
-      expect(await ettProxyContract.connect(testUsers[15]).redeem(
         voucher,
         { value: ethers.utils.parseEther("1") }
       ));
