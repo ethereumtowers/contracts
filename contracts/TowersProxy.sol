@@ -9,7 +9,7 @@ import "./EthereumTower.sol";
 contract TowersProxy is EIP712, Ownable, ReentrancyGuard {
     string private constant SIGNING_DOMAIN = "EthereumTower";
     string private constant SIGNATURE_VERSION = "1";
-    uint256 public MAX_ITEMS_IN_TOWER = 50; //Max token count on tower 2
+    uint256 public MAX_ITEMS_IN_TOWER = 2194; //Max token count on tower 2
     bool public isActive = true; //Smart contract status
     address public serviceAddress; //Backend signer address
 
