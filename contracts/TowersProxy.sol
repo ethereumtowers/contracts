@@ -106,11 +106,7 @@ contract TowersProxy is EIP712 {
     }
 
     function getChainId() external view returns (uint256) {
-        uint256 id;
-        assembly {
-            id := chainid()
-        }
-        return id;
+        return block.chainid;
     }
 
     function _verify(EthereumTowerVoucher calldata ethereumtowervoucher)
@@ -121,56 +117,51 @@ contract TowersProxy is EIP712 {
         bytes32 digest = _hash(ethereumtowervoucher);
         return ECDSA.recover(digest, ethereumtowervoucher.signature);
     }
-    //Add role and stage similar main contract 
-    function addRoleForStage(uint256 _stage, bytes32 _role) public {
+
+    modifier onlyOwner() {
         require(msg.sender == contractOwner, "You are not a contract owner");
+        _;
+    }
+
+    //Add role and stage similar main contract 
+    function addRoleForStage(uint256 _stage, bytes32 _role) public onlyOwner {
         currentStageRole[_stage] = _role;
         currentStage = _stage;
     }
     //Clear token ownership on tower 2
-    function resetOwnerOf(address _user) public {
-      require(msg.sender == contractOwner, "You are not a contract owner");
-      ownerOfToken[msg.sender] = false;
+    function resetOwnerOf(address _user) public onlyOwner {
+      ownerOfToken[_user] = false;
     }
     //Reset minted token count on tower 2
-    function resetTokenCount(uint256 _count) public {
-      require(msg.sender == contractOwner, "You are not a contract owner");
+    function resetTokenCount(uint256 _count) public onlyOwner {
       tokenCount = _count;
     }
     //Disable contract
-    function disableContract() public {
-      require(msg.sender == contractOwner, "You are not a contract owner");
+    function disableContract() public onlyOwner {
       isActive = false;
     }
     //Enable contract
-    function enableContract() public {
-      require(msg.sender == contractOwner, "You are not a contract owner");
+    function enableContract() public onlyOwner {
       isActive = true;
     }
     //Add user to blacklist
-    function addToBlacklist(address _user) public {
-      require(msg.sender == contractOwner, "You are not a contract owner");
+    function addToBlacklist(address _user) public onlyOwner {
       blacklisted[_user] = true;
     }
     //Remove user from blacklist
-    function removeFromBlacklist(address _user) public {
-      require(msg.sender == contractOwner, "You are not a contract owner");
+    function removeFromBlacklist(address _user) public onlyOwner {
       blacklisted[_user] = false;
     }
     //Change service address wich sign signature at backend
-    function changeServiceAddress(address _serviceAddress) public {
-      require(msg.sender == contractOwner, "You are not a contract owner");
+    function changeServiceAddress(address _serviceAddress) public onlyOwner {
       serviceAddress = _serviceAddress;
     }
     //Change fee address witch get funds from sales
-    function changeFeeAddress(address _feeAddress) public {
-      require(msg.sender == contractOwner, "You are not a contract owner");
-      feeAddress = _feeAddress;
+    function changeFeeAddress(address _feeAddress) public onlyOwner {
+      feeAddress = payable(_feeAddress);
     }
     //Change main tower contract
-    function changeTowerContract(address _towerContract) public {
-      require(msg.sender == contractOwner, "You are not a contract owner");
+    function changeTowerContract(address _towerContract) public onlyOwner {
       TowersContract = _towerContract;
     }
-
 }
