@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Sources flattened with hardhat v2.8.4 https://hardhat.org
 
 // File @chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol@v0.4.0
@@ -3222,3 +3223,6 @@ contract TowersProxy is EIP712 {
       TowersContract = _towerContract;
     }
 }
+=======
+
+>>>>>>> af1a80e91694eb35c64633816553b0ee564f2f3b

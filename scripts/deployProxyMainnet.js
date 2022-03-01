@@ -1,27 +1,21 @@
 const hre = require('hardhat')
 let mainTower = '0x72b3B26848a30D3D76e5B67959a365B6aD388c49'
-let proxyTower
+let servicePublicKey = '0x38De691413CC32d6354E27c93569d4275Fa7f984'
+let feePublicKey = '0x38De691413CC32d6354E27c93569d4275Fa7f984'
 async function proxy() {
   const [deployer] = await ethers.getSigners()
   console.log(
     'Deployer: ' + deployer.address
   )
-    // address _towersContract,
-    // address _feeAddress,
-    // uint256 _price,
-    // uint64 subscriptionId
   const TP = await hre.ethers.getContractFactory('TowersProxy')
-  const tp = await TP.deploy("0x4788C01B3561E26d63AF7f35E3eCb5b2593c79cC", '0x38De691413CC32d6354E27c93569d4275Fa7f984')
+  const tp = await TP.deploy(mainTower, servicePublicKey, feePublicKey)
   await tp.deployed()
   console.log('Ethereum Proxy deployed to:', tp.address)
   proxyTower = tp.address
 }
-// main()
-//   .then(() => {
     proxy().then(()=>{
       process.exit(0)
     })
-  // })
   .catch((error) => {
     console.error(error)
     process.exit(1)

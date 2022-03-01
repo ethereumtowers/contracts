@@ -7,7 +7,7 @@
     "test": "npx hardhat --network ganache test",
     "deploy-testnet": "npx hardhat run --network ropsten scripts/deployment.js",
     "proxy-deploy-testnet": "npx hardhat run --network ropsten scripts/deployProxy.js",
-    "proxy-deploy-mainnet": "npx hardhat run --network mainnet scripts/deployProxy.js",
+    "proxy-deploy-mainnet": "npx hardhat run --network mainnet scripts/deployProxyMainnet.js",
     "deploy-mainnet": "npx hardhat run --network mainnet scripts/deployment.js",
     "generate:json": "npx hardhat run --network mainnet scripts/generateJson.js",
     "deploy-testnet-airdrop": "npx hardhat run --network rinkeby scripts/test-deployment-airdrop.js",
@@ -15,7 +15,8 @@
     "flatten:Tower": "npx hardhat flatten contracts/EthereumTower.sol > flattened_tower.sol --show-stack-traces",
     "flatten:Proxy": "npx hardhat flatten contracts/TowersProxy.sol > flattened_tower_proxy.sol --show-stack-traces",
     "verify-ropsten": "npx hardhat verify --constructor-args arguments.js --network ropsten",
-    "verify-proxy-mainnet": "npx hardhat verify --constructor-args arguments.js --network mainnet"
+    "verify-proxy-mainnet": "npx hardhat verify --constructor-args argumentsMainnetProxy.js --network mainnet",
+    "verify-proxy-ropsten": "npx hardhat verify --constructor-args argumentsRopstenProxy.js --network ropsten"
   },
   "author": "Sergey Kononov",
   "license": "MIT",

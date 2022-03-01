@@ -1,37 +1,31 @@
+//SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
-import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./EthereumTower.sol";
 
-contract TowersProxy is EIP712 {
+contract TowersProxy is EIP712, Ownable, ReentrancyGuard {
     string private constant SIGNING_DOMAIN = "EthereumTower";
     string private constant SIGNATURE_VERSION = "1";
-    uint256 public MAX_ITEMS_IN_TOWER = 36; //Max token count on tower 2
-    address payable feeAddress; //Fee address
-    bool isActive = true; //Smart contract status
-    address serviceAddress; //Backend signer address
+    uint256 public MAX_ITEMS_IN_TOWER = 50; //Max token count on tower 2
+    bool public isActive = true; //Smart contract status
+    address public serviceAddress; //Backend signer address
 
-    address TowersContract; //Ethereum tower main contract
-    address contractOwner; //Contract deployer
-    uint256 currentStage; //Current stage setted on addStageRole
+    address public TowersContract; //Ethereum tower main contract
+    uint256 public currentStage; //Current stage setted on addStageRole
     uint256 public tokenCount = 34; //Minted on tower 2 tokens
 
     mapping(uint256 => bytes32) public currentStageRole;
     mapping(address => bool) public ownerOfToken;
-    mapping(uint256 => address) public minted;
     mapping(address => bool) public blacklisted;
 
     constructor(
         address _towersContract,
-        address _feeAddress,
         address _serviceAddress
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
         TowersContract = _towersContract;
-        contractOwner = msg.sender;
-        feeAddress = payable(_feeAddress);
         serviceAddress = _serviceAddress;
     }
 
@@ -43,6 +37,7 @@ contract TowersProxy is EIP712 {
     function redeem(EthereumTowerVoucher calldata ethereumtowervoucher)
         public
         payable
+        nonReentrant
         returns (uint256)
     {
         //Check that contract is enabled
@@ -77,10 +72,6 @@ contract TowersProxy is EIP712 {
             msg.sender,
             ethereumtowervoucher.tokenId
         );
-        //Transfer funds to feeAddress
-        feeAddress.transfer(msg.value);
-        //Mark user as minter on tower 2
-        minted[ethereumtowervoucher.tokenId] = msg.sender;
         //Mark user as owner of token on tower 2
         ownerOfToken[msg.sender] = true;
         //Incrase token count on tower 2
@@ -118,9 +109,13 @@ contract TowersProxy is EIP712 {
         return ECDSA.recover(digest, ethereumtowervoucher.signature);
     }
 
-    modifier onlyOwner() {
-        require(msg.sender == contractOwner, "You are not a contract owner");
-        _;
+    function withdrawableBalance() external view returns (uint256) {
+        return address(this).balance;
+    }
+
+    function withdraw(uint256 amount) external onlyOwner {
+        require(amount <= address(this).balance, "Insufficient funds to withdraw");
+        payable(msg.sender).transfer(amount);
     }
 
     //Add role and stage similar main contract 
@@ -155,13 +150,5 @@ contract TowersProxy is EIP712 {
     //Change service address wich sign signature at backend
     function changeServiceAddress(address _serviceAddress) public onlyOwner {
       serviceAddress = _serviceAddress;
-    }
-    //Change fee address witch get funds from sales
-    function changeFeeAddress(address _feeAddress) public onlyOwner {
-      feeAddress = payable(_feeAddress);
-    }
-    //Change main tower contract
-    function changeTowerContract(address _towerContract) public onlyOwner {
-      TowersContract = _towerContract;
     }
 }
