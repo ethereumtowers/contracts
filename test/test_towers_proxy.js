@@ -195,21 +195,15 @@ describe("TowersProxy contract", function () {
       let withdrawAmount = await ethers.provider.getBalance(ettProxyContract.address);
       let ownerBalanceBefore = await ethers.provider.getBalance(testUsers[0].address);
 
-      console.log(testUsers[0].address);
-      console.log(await ettProxyContract.owner());
+      const tx = await ettProxyContract.withdraw(withdrawAmount);
 
-      console.log(withdrawAmount);
-      console.log(ownerBalanceBefore);
-
-      await ettProxyContract.withdraw(withdrawAmount);
+      const receipt = await tx.wait();
+      const gasUsed = receipt.cumulativeGasUsed.mul(receipt.effectiveGasPrice);
 
       let ownerBalanceAfter = await ethers.provider.getBalance(testUsers[0].address);
 
-      console.log(ownerBalanceBefore);
-      console.log(await ettProxyContract.withdrawableBalance());
-
-      expect(await ettProxyContract.connect(testUsers[1]).withdrawableBalance()).to.be.equal(ethers.utils.parseEther('0'))
-        && expect(ownerBalanceAfter).to.be.equal(ownerBalanceBefore.add(withdrawAmount));
+      expect(await ettProxyContract.withdrawableBalance()).to.be.equal(ethers.utils.parseEther('0'))
+        && expect(ownerBalanceAfter).to.be.equal(ownerBalanceBefore.add(withdrawAmount).sub(gasUsed));
     });
 
     it("should revert redeem of the same token twice", async function () {
