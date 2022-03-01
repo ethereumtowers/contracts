@@ -9,7 +9,7 @@ import "./EthereumTower.sol";
 contract TowersProxy is EIP712, Ownable, ReentrancyGuard {
     string private constant SIGNING_DOMAIN = "EthereumTower";
     string private constant SIGNATURE_VERSION = "1";
-    uint256 public MAX_ITEMS_IN_TOWER = 50; //Max token count on tower 2
+    uint256 public MAX_ITEMS_IN_TOWER = 2194; //Max token count on tower 2
     bool public isActive = true; //Smart contract status
     address public serviceAddress; //Backend signer address
 
@@ -19,7 +19,6 @@ contract TowersProxy is EIP712, Ownable, ReentrancyGuard {
 
     mapping(uint256 => bytes32) public currentStageRole;
     mapping(address => bool) public ownerOfToken;
-    mapping(address => bool) public blacklisted;
 
     constructor(
         address _towersContract,
@@ -42,8 +41,6 @@ contract TowersProxy is EIP712, Ownable, ReentrancyGuard {
     {
         //Check that contract is enabled
         require(isActive, "Try agan later,for now contract is disabled by Administrator!");
-        //Check user that is not blacklisted
-        require(!blacklisted[msg.sender], "Your wallet address is already banned by the Administrator");
         //Check user that is not have nft on tower 2
         require(!ownerOfToken[msg.sender], "User can have only one of the nft on the tower");
         //Check tokencount on contract
@@ -138,14 +135,6 @@ contract TowersProxy is EIP712, Ownable, ReentrancyGuard {
     //Enable contract
     function enableContract() public onlyOwner {
       isActive = true;
-    }
-    //Add user to blacklist
-    function addToBlacklist(address _user) public onlyOwner {
-      blacklisted[_user] = true;
-    }
-    //Remove user from blacklist
-    function removeFromBlacklist(address _user) public onlyOwner {
-      blacklisted[_user] = false;
     }
     //Change service address wich sign signature at backend
     function changeServiceAddress(address _serviceAddress) public onlyOwner {
