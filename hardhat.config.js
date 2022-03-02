@@ -58,7 +58,7 @@ module.exports = {
     mainnet: {
       url: 'https://mainnet.infura.io/v3/9e349ff53f74485b8ee1ab71583f6c8e',
       chainId: 1,
-      gasPrice: 20000000000, //Change to 8000000000
+      gasPrice: 150000000000, //Change to 8000000000
       accounts: [
         privateKey,
         privateKey1,

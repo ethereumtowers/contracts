@@ -11,7 +11,7 @@ async function proxy() {
     // uint256 _price,
     // uint64 subscriptionId
   const TP = await hre.ethers.getContractFactory('TowersProxy')
-  const tp = await TP.deploy("0x4788C01B3561E26d63AF7f35E3eCb5b2593c79cC", '0x38De691413CC32d6354E27c93569d4275Fa7f984')
+  const tp = await TP.deploy("0x1944937643d8317D23bc49766412385F8ec6452F", '0x38De691413CC32d6354E27c93569d4275Fa7f984')
   await tp.deployed()
   console.log('Ethereum Proxy deployed to:', tp.address)
   proxyTower = tp.address
