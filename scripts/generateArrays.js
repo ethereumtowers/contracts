@@ -26,7 +26,6 @@ async function generateJson() {
   let tokens = await Owner.find().lean()
   let owners = []
   let ids = []
-  let urls = []
   console.log('DD')
   let all = await Owner.find()
   let page = 1
@@ -42,7 +41,6 @@ async function generateJson() {
     for (let i = 0; i < paginatedAll.length; i++) {
       owners.push(paginatedAll[i].ownerAddress)
       ids.push(paginatedAll[i].id)
-      urls.push(paginatedAll[i].iamge_url)
     }
     content = {
       addresses: owners,
@@ -58,7 +56,6 @@ async function generateJson() {
     })
     ids = []
     owners = []
-    urls = []
     if(i === pageCount){
       process.exit(0)
     }

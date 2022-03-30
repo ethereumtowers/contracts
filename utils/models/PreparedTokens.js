@@ -11,5 +11,5 @@ const tokenShema = new Schema({
     owner: String
 })
 
-const TokenPrepared = mongoose.model('preparedTokens', tokenShema)
+const TokenPrepared = mongoose.model('ValidTokensWithGenerated', tokenShema)
 module.exports = TokenPrepared
