@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "npx hardhat --network ganache test",
+    "test": "npx hardhat test --network harhdat",
     "deploy-testnet": "npx hardhat run --network ropsten scripts/deployment.js",
     "proxy-deploy-testnet": "npx hardhat run --network ropsten scripts/deployProxy.js",
     "proxy-deploy-mainnet": "npx hardhat run --network mainnet scripts/deployProxyMainnet.js",
@@ -14,6 +14,7 @@
     "generate:files": "npx hardhat run --network mainnet scripts/generateArrays.js",
     "flatten:Tower": "npx hardhat flatten contracts/EthereumTower.sol > flattened_tower.sol --show-stack-traces",
     "flatten:Proxy": "npx hardhat flatten contracts/TowersProxy.sol > flattened_tower_proxy.sol --show-stack-traces",
+    "flatten:EthereumWorlds": "npx hardhat flatten contracts/EthereumWorlds.sol > flattened_ethereum_worlds.sol --show-stack-traces",
     "verify-ropsten": "npx hardhat verify --constructor-args arguments.js --network ropsten",
     "verify-proxy-mainnet": "npx hardhat verify --constructor-args argumentsMainnetProxy.js --network mainnet",
     "verify-proxy-ropsten": "npx hardhat verify --constructor-args argumentsRopstenProxy.js --network ropsten"
@@ -28,7 +29,8 @@
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.5.2",
     "hardhat": "^2.8.0",
-    "mocha": "^9.1.3"
+    "mocha": "^9.1.3",
+    "solidity-coverage": "^0.7.20"
   },
   "dependencies": {
     "@chainlink/contracts": "^0.4.0",
