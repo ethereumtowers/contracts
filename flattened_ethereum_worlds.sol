@@ -1,46 +1,4 @@
 pragma solidity ^0.8.0;
-abstract contract Context {
-    function _msgSender() internal view virtual returns (address) {
-        return msg.sender;
-    }
-    function _msgData() internal view virtual returns (bytes calldata) {
-        return msg.data;
-    }
-}
-pragma solidity ^0.8.0;
-abstract contract Ownable is Context {
-    address private _owner;
-    event OwnershipTransferred(
-        address indexed previousOwner,
-        address indexed newOwner
-    );
-    constructor() {
-        _transferOwnership(_msgSender());
-    }
-    function owner() public view virtual returns (address) {
-        return _owner;
-    }
-    modifier onlyOwner() {
-        require(owner() == _msgSender(), "Ownable: caller is not the owner");
-        _;
-    }
-    function renounceOwnership() public virtual onlyOwner {
-        _transferOwnership(address(0));
-    }
-    function transferOwnership(address newOwner) public virtual onlyOwner {
-        require(
-            newOwner != address(0),
-            "Ownable: new owner is the zero address"
-        );
-        _transferOwnership(newOwner);
-    }
-    function _transferOwnership(address newOwner) internal virtual {
-        address oldOwner = _owner;
-        _owner = newOwner;
-        emit OwnershipTransferred(oldOwner, newOwner);
-    }
-}
-pragma solidity ^0.8.0;
 interface IERC20 {
     function totalSupply() external view returns (uint256);
     function balanceOf(address account) external view returns (uint256);
@@ -69,6 +27,15 @@ interface IERC20Metadata is IERC20 {
     function name() external view returns (string memory);
     function symbol() external view returns (string memory);
     function decimals() external view returns (uint8);
+}
+pragma solidity ^0.8.0;
+abstract contract Context {
+    function _msgSender() internal view virtual returns (address) {
+        return msg.sender;
+    }
+    function _msgData() internal view virtual returns (bytes calldata) {
+        return msg.data;
+    }
 }
 pragma solidity ^0.8.0;
 contract ERC20 is Context, IERC20, IERC20Metadata {
@@ -233,36 +200,10 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
         uint256 amount
     ) internal virtual {}
 }
-pragma solidity ^0.8.0;
-abstract contract ERC20Capped is ERC20 {
-    uint256 private immutable _cap;
-    constructor(uint256 cap_) {
-        require(cap_ > 0, "ERC20Capped: cap is 0");
-        _cap = cap_;
-    }
-    function cap() public view virtual returns (uint256) {
-        return _cap;
-    }
-    function _mint(address account, uint256 amount) internal virtual override {
-        require(
-            ERC20.totalSupply() + amount <= cap(),
-            "ERC20Capped: cap exceeded"
-        );
-        super._mint(account, amount);
-    }
-}
 pragma solidity 0.8.9;
-contract EthereumWorlds is ERC20, ERC20Capped, Ownable {
-    constructor(address distributor)
-        ERC20("Ethereum Worlds", "TWR")
-        ERC20Capped(1000000000 ether)
-    {
-        _mint(distributor, cap());
-    }
-    function _mint(address to, uint256 amount)
-        internal
-        override(ERC20, ERC20Capped)
-    {
-        super._mint(to, amount);
+contract EthereumWorlds is ERC20 {
+    uint256 public constant MAX_SUPPLY = 1000000000 ether;
+    constructor(address distributor) ERC20("Ethereum Worlds", "TWR") {
+        _mint(distributor, MAX_SUPPLY);
     }
 }

@@ -7,17 +7,16 @@ require("@nomiclabs/hardhat-etherscan");
 require('solidity-coverage');
 
 const privateKey = process.env.DEPLOYER
-const privateKey1 = process.env.DISTRIBUTOR
-const privateKey2 = process.env.TEST_USER
-const privateKey3 = process.env.TEST_USER_2
-const privateKey4 = process.env.TEST_USER_3
-const privateKey5 = process.env.TEST_USER_4
-const privateKey6 = process.env.TEST_USER_5
-const privateKey7 = process.env.TEST_USER_6
-const privateKey8 = process.env.TEST_USER_7
-const privateKey9 = process.env.TEST_USER_8
-const privateKey10 = process.env.TEST_USER_9
-const privateKey11 = process.env.TEST_USER_10
+const privateKey1 = process.env.TEST_USER
+const privateKey2 = process.env.TEST_USER_2
+const privateKey3 = process.env.TEST_USER_3
+const privateKey4 = process.env.TEST_USER_4
+const privateKey5 = process.env.TEST_USER_5
+const privateKey6 = process.env.TEST_USER_6
+const privateKey7 = process.env.TEST_USER_7
+const privateKey8 = process.env.TEST_USER_8
+const privateKey9 = process.env.TEST_USER_9
+const privateKey10 = process.env.TEST_USER_10
 
 module.exports = {
   defaultNetwork: 'ropsten',
@@ -25,7 +24,6 @@ module.exports = {
     hardhat: {},
     ropsten: {
       url: 'https://eth-ropsten.alchemyapi.io/v2/NBpktksmgExwiNqsVSmdd6DQMs12MIKb',
-      gasPrice: 100000000000,
       accounts: [
         privateKey,
         privateKey1,
@@ -38,7 +36,6 @@ module.exports = {
         privateKey8,
         privateKey9,
         privateKey10,
-        privateKey11,
       ],
     },
     rinkeby: {
@@ -56,7 +53,6 @@ module.exports = {
         privateKey8,
         privateKey9,
         privateKey10,
-        privateKey11,
       ],
     },
     mainnet: {
@@ -75,7 +71,6 @@ module.exports = {
         privateKey8,
         privateKey9,
         privateKey10,
-        privateKey11,
       ],
     },
   },
