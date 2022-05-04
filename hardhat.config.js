@@ -19,7 +19,7 @@ const privateKey9 = process.env.TEST_USER_9
 const privateKey10 = process.env.TEST_USER_10
 
 module.exports = {
-  defaultNetwork: 'ropsten',
+  defaultNetwork: 'hardhat',
   networks: {
     hardhat: {},
     ropsten: {
@@ -55,6 +55,10 @@ module.exports = {
         privateKey10,
       ],
     },
+    goerli: {
+      url: 'https://goerli.infura.io/v3/2952bf02ce35410693f107b451ab55e1',
+      accounts: [privateKey],
+    },
     mainnet: {
       url: 'https://mainnet.infura.io/v3/9e349ff53f74485b8ee1ab71583f6c8e',
       chainId: 1,
@@ -82,7 +86,7 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 1000,
       },
     },
   },

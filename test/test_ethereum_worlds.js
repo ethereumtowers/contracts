@@ -2,6 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 const ethWorldsContractName = "EthereumWorlds";
+const tokensCap = ethers.utils.parseEther("1000000000");
 
 describe(`${ethWorldsContractName} contract`, function () {
   var tokenContract;
@@ -23,14 +24,10 @@ describe(`${ethWorldsContractName} contract`, function () {
   });
 
   it('should mint all tokens', async function () {
-    const tokensCap = await tokenContract.cap();
-
     expect(await tokenContract.totalSupply()).to.be.equal(tokensCap);
   });
 
   it('should mint all tokens to distributor address', async function () {
-    const tokensCap = await tokenContract.cap();
-
     expect(await tokenContract.balanceOf(distributor.address)).to.be.equal(tokensCap);
   });
 
@@ -41,13 +38,5 @@ describe(`${ethWorldsContractName} contract`, function () {
     await tokenContract.connect(distributor).transfer(receiver.address, amount);
 
     expect(await tokenContract.balanceOf(receiver.address)).to.be.equal(amount);
-  });
-
-  it('should transfer ownership', async function() {
-    const newOwner = testUsers[15];
-
-    await tokenContract.transferOwnership(newOwner.address);
-
-    expect(await tokenContract.owner()).to.be.equal(newOwner.address);
   });
 });
