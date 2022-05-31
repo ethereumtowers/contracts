@@ -33,6 +33,11 @@ contract EthereumWorldsNFTStaking is
         address owner;
     }
 
+    struct ClaimInfo {
+        uint224 totalClaimed;
+        uint32 lastClaimTimestamp;
+    }
+
     struct StakeVoucher {
         uint256[] tokenIds;
         bool rentable;
@@ -79,6 +84,7 @@ contract EthereumWorldsNFTStaking is
 
     mapping(uint256 => StakeInfo) private stakes;
     mapping(address => uint256[]) private userTokens;
+    mapping(address => ClaimInfo) private claims;
     mapping(bytes => bool) private signatureUsed;
 
     bool public shutdown = false;
@@ -234,7 +240,7 @@ contract EthereumWorldsNFTStaking is
 
         tokensInStake += voucher.tokenIds.length;
 
-        signatureUsed[voucher.signature] = true;
+        _markSignatureUsed(voucher.signature);
     }
 
     function _unstakeSingle(uint256 tokenId, address to) internal {
@@ -274,7 +280,7 @@ contract EthereumWorldsNFTStaking is
 
         tokensInStake -= voucher.tokenIds.length;
 
-        signatureUsed[voucher.signature] = true;
+        _markSignatureUsed(voucher.signature);
     }
 
     function claim(ClaimVoucher calldata voucher)
@@ -303,7 +309,8 @@ contract EthereumWorldsNFTStaking is
 
         worldsToken.safeTransfer(_msgSender(), voucher.amount);
 
-        signatureUsed[voucher.signature] = true;
+        _markRewardClaimed(voucher.amount);
+        _markSignatureUsed(voucher.signature);
 
         emit RewardClaimed(_msgSender(), voucher.amount);
     }
@@ -368,8 +375,25 @@ contract EthereumWorldsNFTStaking is
         return userTokens[owner];
     }
 
+    function getClaimsInfo(address owner)
+        external
+        view
+        returns (ClaimInfo memory)
+    {
+        return claims[owner];
+    }
+
     function isRentable(uint256 tokenId) external view returns (bool) {
         return stakes[tokenId].rentable;
+    }
+
+    function _markRewardClaimed(uint256 amount) internal {
+        claims[_msgSender()].totalClaimed += amount.toUint224();
+        claims[_msgSender()].lastClaimTimestamp = block.timestamp.toUint32();
+    }
+
+    function _markSignatureUsed(bytes memory signature) internal {
+        signatureUsed[signature] = true;
     }
 
     function _deleteFromTokensArray(address owner, uint256 tokenId) internal {
