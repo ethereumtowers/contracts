@@ -62,8 +62,15 @@ contract EthereumWorldsNFTStaking is
     string private constant SIGNING_DOMAIN = "EW_STAKING";
     string private constant SIGNATURE_VERSION = "1";
 
-    uint256 private maxTokensInStake = 4388;
-    uint256 private tokensInStake = 0;
+    uint256 public maxTokensInStake = 4388;
+    uint256 public tokensInStake = 0;
+
+    /**
+     * @dev this limitation was added to avoid out of gas issues
+     * if user have a lot of tokens staked.
+     * Unstake of 20 tokens will require approx. 700k-800k gas.
+     */
+    uint256 private constant maxTokensPerUnstake = 20;
 
     IERC20 immutable worldsToken;
     IERC721 immutable towersContract;
@@ -73,6 +80,8 @@ contract EthereumWorldsNFTStaking is
     mapping(uint256 => StakeInfo) private stakes;
     mapping(address => uint256[]) private userTokens;
     mapping(bytes => bool) private signatureUsed;
+
+    bool public shutdown = false;
 
     event ServiceSignerUpdated(address indexed newAddress);
     event TokenStaked(
@@ -87,6 +96,11 @@ contract EthereumWorldsNFTStaking is
         bool rentable
     );
     event RewardClaimed(address indexed by, uint256 amount);
+    event TokenRescue(
+        address indexed token,
+        address indexed to,
+        uint256 amount
+    );
 
     constructor(
         address _worldsToken,
@@ -129,6 +143,23 @@ contract EthereumWorldsNFTStaking is
         maxTokensInStake = _maxTokensInStake;
     }
 
+    function toggleShutdown(bool _shutdown) external onlyOwner {
+        shutdown = _shutdown;
+    }
+
+    function rescueERC20(
+        address token,
+        uint256 amount,
+        address to
+    ) external onlyOwner validDestination(to) {
+        require(token != address(0), "EWStaking: zero token address");
+        require(amount > 0, "EWStaking: zero amount");
+
+        IERC20(token).safeTransfer(to, amount);
+
+        emit TokenRescue(token, to, amount);
+    }
+
     function onERC721Received(
         address operator,
         address,
@@ -147,6 +178,8 @@ contract EthereumWorldsNFTStaking is
         whenNotPaused
         nonReentrant
     {
+        require(!shutdown, "EWStaking: shut down");
+
         require(voucher.tokenIds.length > 0, "EWStaking: nothing to stake");
         require(
             tokensInStake + voucher.tokenIds.length <= maxTokensInStake,
@@ -204,6 +237,20 @@ contract EthereumWorldsNFTStaking is
         signatureUsed[voucher.signature] = true;
     }
 
+    function _unstakeSingle(uint256 tokenId, address to) internal {
+        require(
+            stakes[tokenId].owner == _msgSender(),
+            "EWStaking: you are not an owner"
+        );
+
+        towersContract.safeTransferFrom(address(this), to, tokenId);
+
+        _deleteFromTokensArray(_msgSender(), tokenId);
+        delete stakes[tokenId];
+
+        emit TokenUnstaked(_msgSender(), tokenId);
+    }
+
     function unstake(UnstakeVoucher calldata voucher, address to)
         external
         whenNotPaused
@@ -222,19 +269,7 @@ contract EthereumWorldsNFTStaking is
         require(_msgSender() == voucher.owner, "EWStaking: not your voucher");
 
         for (uint256 i = 0; i < voucher.tokenIds.length; ++i) {
-            uint256 tokenId = voucher.tokenIds[i];
-
-            require(
-                stakes[tokenId].owner == _msgSender(),
-                "EWStaking: you are not an owner"
-            );
-
-            towersContract.safeTransferFrom(address(this), to, tokenId);
-
-            _deleteFromTokensArray(_msgSender(), tokenId);
-            delete stakes[tokenId];
-
-            emit TokenUnstaked(_msgSender(), tokenId);
+            _unstakeSingle(voucher.tokenIds[i], to);
         }
 
         tokensInStake -= voucher.tokenIds.length;
@@ -293,6 +328,24 @@ contract EthereumWorldsNFTStaking is
         stakes[tokenId].deposit = _deposit;
 
         emit TokenSetRentable(_msgSender(), tokenId, _rentable);
+    }
+
+    function emergencyUnstake() external whenNotPaused nonReentrant {
+        require(shutdown, "EWStaking: contract should be shut down");
+
+        uint256[] memory ids = userTokens[_msgSender()];
+
+        require(ids.length > 0, "EWStaking: nothing to unstake");
+
+        uint256 unstakeAmount = ids.length > maxTokensPerUnstake
+            ? maxTokensPerUnstake
+            : ids.length;
+
+        for (uint256 i = 0; i < unstakeAmount; ++i) {
+            _unstakeSingle(ids[i], _msgSender());
+        }
+
+        tokensInStake -= ids.length;
     }
 
     function getChainId() external view returns (uint256) {
