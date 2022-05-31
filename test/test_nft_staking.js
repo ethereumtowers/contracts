@@ -193,6 +193,20 @@ describe(`${stakingContractName} contract`, function () {
         .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
+    it("should restrict calling toggleShutdown to owner only", async function () {
+      await expect(staking.connect(testUsers[1]).toggleShutdown(true))
+        .to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("should restrict calling rescueERC20 to owner only", async function () {
+      await expect(staking.connect(testUsers[1]).rescueERC20(
+        ethers.constants.AddressZero,
+        100,
+        testUsers[1].address
+      ))
+        .to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
     it("should revert direct token transfer to contract", async function () {
       const tokenOwner = testUsers[10];
       const tokenId = 1993;
@@ -225,7 +239,51 @@ describe(`${stakingContractName} contract`, function () {
       expect(await staking.paused()).to.be.false;
     });
 
-    it("should restrict calling stake if it is paused", async function () {
+    it("should toggleShutdown to true", async function () {
+      await staking.toggleShutdown(true);
+      expect(await staking.shutdown()).to.be.true;
+    });
+
+    it("should toggleShutdown to false", async function () {
+      await staking.toggleShutdown(false);
+      expect(await staking.shutdown()).to.be.false;
+    });
+
+    it("should restrict calling rescueERC20 with token address = address(0)", async function () {
+      await expect(staking.rescueERC20(ethers.constants.AddressZero, 100, testUsers[1].address))
+        .to.be.revertedWith("EWStaking: zero token address");
+    });
+
+    it("should restrict calling rescueERC20 with zero amount", async function () {
+      await expect(staking.rescueERC20(erc20.address, 0, testUsers[1].address))
+        .to.be.revertedWith("EWStaking: zero amount");
+    });
+
+    it("should restrict calling rescueERC20 with destination address = address(0)", async function () {
+      await expect(staking.rescueERC20(erc20.address, 100, ethers.constants.AddressZero))
+        .to.be.revertedWith("EWStaking: transfer to zero address");
+    });
+
+    it("should restrict calling rescueERC20 with destination address = address(this)", async function () {
+      await expect(staking.rescueERC20(erc20.address, 100, staking.address))
+        .to.be.revertedWith("EWStaking: transfer to contract");
+    });
+
+    it("should rescue ERC20 tokens stucked on contract wallet", async function () {
+      const stuckAmount = ethers.utils.parseEther('10');
+      const destination = testUsers[5].address;
+
+      const contractBalanceBefore = await erc20.balanceOf(staking.address);
+
+      await erc20.mint(staking.address, stuckAmount);
+
+      expect(await erc20.balanceOf(staking.address)).to.be.equal(contractBalanceBefore.add(stuckAmount));
+      expect(await staking.rescueERC20(erc20.address, stuckAmount, destination));
+      expect(await erc20.balanceOf(staking.address)).to.be.equal(contractBalanceBefore);
+      expect(await erc20.balanceOf(destination)).to.be.equal(stuckAmount);
+    });
+
+    it("should restrict calling stake if contract is paused", async function () {
       const staker = testUsers[0];
 
       const stakeVoucherData = {
@@ -248,6 +306,33 @@ describe(`${stakingContractName} contract`, function () {
       await staking.pause();
       await expect(staking.stake(signedStakeVoucher)).to.be.revertedWith("Pausable: paused");
       await staking.unpause();
+    });
+
+    it("should restrict calling stake when contract is shut down", async function () {
+      const staker = testUsers[0];
+
+      const stakeVoucherData = {
+        tokenIds: [1],
+        rentable: true,
+        minRentPeriod: 1,
+        rentableUntil: 2,
+        rentalDailyPrice: 3,
+        deposit: 4,
+        nonce: nonce++,
+        owner: staker.address
+      };
+
+      const signedStakeVoucher = await eip712Signer.signVoucher(
+        stakeVoucherData,
+        StakeVoucherType,
+        serviceSigner
+      );
+
+      await staking.toggleShutdown(true);
+
+      await expect(staking.stake(signedStakeVoucher)).to.be.revertedWith("EWStaking: shut down");
+
+      await staking.toggleShutdown(false);
     });
 
     it("should restrict calling stake for empty tokens array", async function () {
@@ -774,6 +859,93 @@ describe(`${stakingContractName} contract`, function () {
       // check unstake with already used voucher
       await expect(staking.unstake(signedUnstakeVoucher, staker.address))
         .to.be.revertedWith("EWStaking: this voucher already used");
+    });
+
+    it("should restrict calling emergencyUnstake when contract is not shut down", async function () {
+      await expect(staking.emergencyUnstake()).to.be.revertedWith("EWStaking: contract should be shut down");
+    });
+
+    it("should revert calling emergencyUnstake if caller not staked tokens", async function () {
+      const staker = testUsers[10];
+
+      await staking.toggleShutdown(true);
+
+      await expect(staking.connect(staker).emergencyUnstake())
+        .to.be.revertedWith("EWStaking: nothing to unstake");
+
+      await staking.toggleShutdown(false);
+    });
+
+    it("should unstake tokens using emergencyUnstake", async function () {
+      const staker = testUsers[0];
+
+      const stakeVoucherData = {
+        tokenIds: tokenIds,
+        rentable: true,
+        minRentPeriod: 1,
+        rentableUntil: 2,
+        rentalDailyPrice: 3,
+        deposit: 4,
+        nonce: nonce++,
+        owner: staker.address
+      };
+
+      const signedStakeVoucher = await eip712Signer.signVoucher(
+        stakeVoucherData,
+        StakeVoucherType,
+        serviceSigner
+      );
+
+      await erc721.connect(staker).setApprovalForAll(staking.address, true);
+
+      await staking.connect(staker).stake(signedStakeVoucher);
+      await staking.toggleShutdown(true);
+
+      await staking.connect(staker).emergencyUnstake();
+
+      expect((await staking.getTokensByOwner(staker.address)).length).to.be.equal(0);
+
+      await staking.toggleShutdown(false);
+    });
+
+    it("should unstake 20 tokens per transaction using emergencyUnstake", async function () {
+      const staker = testUsers[5];
+
+      const mintTokensAmount = 30;
+      const stakeTokenIds = new Array();
+
+      for (let i = 0; i < mintTokensAmount; ++i) {
+        await erc721.connect(staker).mint(staker.address, 500 + i);
+        stakeTokenIds.push(500 + i);
+      }
+
+      await erc721.connect(staker).setApprovalForAll(staking.address, true);
+
+      const stakeVoucherData = {
+        tokenIds: stakeTokenIds,
+        rentable: false,
+        minRentPeriod: 1,
+        rentableUntil: 2,
+        rentalDailyPrice: 3,
+        deposit: 4,
+        nonce: nonce++,
+        owner: staker.address
+      };
+
+      const signedStakeVoucher = await eip712Signer.signVoucher(
+        stakeVoucherData,
+        StakeVoucherType,
+        serviceSigner
+      );
+
+      await staking.connect(staker).stake(signedStakeVoucher);
+      
+      await staking.toggleShutdown(true);
+      await staking.connect(staker).emergencyUnstake();
+
+      expect((await staking.getTokensByOwner(staker.address)).length).to.be.equal(mintTokensAmount - 20);
+
+      await staking.toggleShutdown(false);
     });
   });
 
