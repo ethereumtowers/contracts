@@ -31,7 +31,7 @@ Deployed contract on Rinkeby Ethereum network
 Run EthereumTowers test:
 
 ```other
-npm run test
+npm run test --network hardhat
 ```
 
 Deploy EthereumTowers smart contract to Rinkeby Testnet:

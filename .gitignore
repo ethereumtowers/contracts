@@ -5,5 +5,17 @@ coverage.json
 typechain
 
 #Hardhat files
-cache
-artifacts
+**.dbg.json
+yarn.lock
+package-lock.json
+cache/
+artifacts/
+
+# IDE
+.vscode/
+
+*.py
+
+# Coverage
+coverage.json
+coverage/
