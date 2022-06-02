@@ -1,67 +1,42 @@
-# Ethereum Towers
+# Ethereum Towers NFT Staking
 
 **Requirements:**
 
 ```other
 NodeJS: 16+
-MongoDB: 4 +
-IPFS: Latest IPFS node
+Solidity: 0.8.9
 ```
 
 **Getting Started:**
 
 ```other
-cd ethereum-towers
+cd contracts
 npm install
-docker-compose up -d
-
-docker-compose down #If you went off MongoDB
-
-Use one of aveliable commands:
 ```
 
+Use one of available commands:
+```
 Deployed contract on Rinkeby Ethereum network
-
-```other
-0x87C338D835e8624345B460FB8bAFB22911e590dF
 ```
 
-**Aveliable commands:**
+**Available commands:**
 
-Run EthereumTowers test:
-
-```other
-npm run test --network hardhat
-```
-
-Deploy EthereumTowers smart contract to Rinkeby Testnet:
+Run EthereumTowersNFTStaking test:
 
 ```other
-npm run deploy-testnet
-```
+npx hardhat test --network hardhat
+```  
 
-Deploy EthereumTowers smart contract to Ethereum mainnet:
-
-```other
-npm run deploy-mainnet
-```
-
-Deploy EthereumTowers smart contract to Rinkeby Testnet with test tokens:
+Run tests with coverage:
 
 ```other
-npm run deploy-testnet-airdrop
-```
+npm hardhat coverage
+```  
 
-Generate JSON from parsed tokens & upload it to ipfs demo ENV:
-
-```other
-npm run generate:json
-```
-
-Get flattened EthereumTowers smart contract:
+Deploy EthereumTowersNFTStaking smart contract to ropsten Testnet:
 
 ```other
-npm run flatten:Tower
+npm run deploy:ropsten
 ```
 
 Default HardHat commands:
