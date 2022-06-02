@@ -14,11 +14,6 @@ cd contracts
 npm install
 ```
 
-Use one of available commands:
-```
-Deployed contract on Rinkeby Ethereum network
-```
-
 **Available commands:**
 
 Run EthereumTowersNFTStaking test:
