@@ -743,6 +743,36 @@ describe(`${stakingContractName} contract`, function () {
         );
     });
 
+    it("should mark reward as claimed after claim", async function () {
+      const rewardOwner = testUsers[13];
+
+      const claimVoucherData = {
+        amount: ethers.utils.parseEther("1"),
+        nonce: nonce++,
+        owner: rewardOwner.address
+      };
+
+      expect((await staking.getClaimsInfo(rewardOwner.address)).totalClaimed).to.equal(0);
+      expect((await staking.getClaimsInfo(rewardOwner.address)).lastClaimTimestamp).to.equal(0);
+
+      const signedClaimVoucher = await eip712Signer.signVoucher(
+        claimVoucherData,
+        ClaimVoucherType,
+        serviceSigner
+      );
+
+      await expect(staking.connect(rewardOwner).claim(signedClaimVoucher))
+        .to.emit(staking, "RewardClaimed").withArgs(
+          rewardOwner.address,
+          claimVoucherData.amount
+        );
+
+      const block = await ethers.provider.getBlock(await ethers.provider.getBlockNumber());
+
+      expect((await staking.getClaimsInfo(rewardOwner.address)).totalClaimed).to.equal(claimVoucherData.amount);
+      expect((await staking.getClaimsInfo(rewardOwner.address)).lastClaimTimestamp).to.equal(block.timestamp);
+    });
+
     it("should restrict calling unstake not for your voucher", async function () {
       const staker = testUsers[0];
       const unstakeVoucherData = {
@@ -939,7 +969,7 @@ describe(`${stakingContractName} contract`, function () {
       );
 
       await staking.connect(staker).stake(signedStakeVoucher);
-      
+
       await staking.toggleShutdown(true);
       await staking.connect(staker).emergencyUnstake();
 
