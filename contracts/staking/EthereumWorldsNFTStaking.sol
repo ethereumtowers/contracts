@@ -90,6 +90,8 @@ contract EthereumWorldsNFTStaking is
     bool public shutdown = false;
 
     event ServiceSignerUpdated(address indexed newAddress);
+    event MaxTokensInStakeUpdated(uint256 newValue);
+    event ToggleStakingShutdown(bool shutdown);
     event TokenStaked(
         address indexed owner,
         uint256 indexed tokenId,
@@ -137,6 +139,8 @@ contract EthereumWorldsNFTStaking is
     }
 
     function updateServiceSigner(address _serviceSigner) external onlyOwner {
+        require(_serviceSigner != address(0), "EWStaking: zero address");
+
         serviceSigner = _serviceSigner;
 
         emit ServiceSignerUpdated(_serviceSigner);
@@ -147,10 +151,14 @@ contract EthereumWorldsNFTStaking is
         onlyOwner
     {
         maxTokensInStake = _maxTokensInStake;
+
+        emit MaxTokensInStakeUpdated(maxTokensInStake);
     }
 
     function toggleShutdown(bool _shutdown) external onlyOwner {
         shutdown = _shutdown;
+
+        emit ToggleStakingShutdown(shutdown);
     }
 
     function rescueERC20(
@@ -352,7 +360,7 @@ contract EthereumWorldsNFTStaking is
             _unstakeSingle(ids[i], _msgSender());
         }
 
-        tokensInStake -= ids.length;
+        tokensInStake -= unstakeAmount;
     }
 
     function getChainId() external view returns (uint256) {
@@ -367,20 +375,20 @@ contract EthereumWorldsNFTStaking is
         return stakes[tokenId];
     }
 
-    function getTokensByOwner(address owner)
+    function getTokensByOwner(address stakeOwner)
         external
         view
         returns (uint256[] memory)
     {
-        return userTokens[owner];
+        return userTokens[stakeOwner];
     }
 
-    function getClaimsInfo(address owner)
+    function getClaimsInfo(address stakeOwner)
         external
         view
         returns (ClaimInfo memory)
     {
-        return claims[owner];
+        return claims[stakeOwner];
     }
 
     function isRentable(uint256 tokenId) external view returns (bool) {
@@ -396,22 +404,26 @@ contract EthereumWorldsNFTStaking is
         signatureUsed[signature] = true;
     }
 
-    function _deleteFromTokensArray(address owner, uint256 tokenId) internal {
-        if (userTokens[owner].length == 1) {
-            userTokens[owner].pop();
+    function _deleteFromTokensArray(address stakeOwner, uint256 tokenId)
+        internal
+    {
+        if (userTokens[stakeOwner].length == 1) {
+            userTokens[stakeOwner].pop();
             return;
         }
 
         uint256 tokenIndex = stakes[tokenId].tokenIndex;
-        uint256 swapTokenId = userTokens[owner][userTokens[owner].length - 1];
+        uint256 swapTokenId = userTokens[stakeOwner][
+            userTokens[stakeOwner].length - 1
+        ];
 
-        userTokens[owner][tokenIndex] = userTokens[owner][
-            userTokens[owner].length - 1
+        userTokens[stakeOwner][tokenIndex] = userTokens[stakeOwner][
+            userTokens[stakeOwner].length - 1
         ];
 
         stakes[swapTokenId].tokenIndex = tokenIndex.toUint16();
 
-        userTokens[owner].pop();
+        userTokens[stakeOwner].pop();
     }
 
     function _hash(StakeVoucher calldata voucher)
