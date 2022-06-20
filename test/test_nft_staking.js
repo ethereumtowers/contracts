@@ -221,12 +221,30 @@ describe(`${stakingContractName} contract`, function () {
         .to.be.revertedWith("ERC721: transfer to non ERC721Receiver implementer");
     });
 
-    it("should update service signer by contract owner", async function () {
+    it("should revert update service signer with zero address", async function () {
       await expect(staking.updateServiceSigner(ethers.constants.AddressZero))
-        .to.emit(staking, 'ServiceSignerUpdated').withArgs(ethers.constants.AddressZero);
+        .to.be.revertedWith("EWStaking: zero address");
+    });
+
+    it("should update service signer by contract owner", async function () {
+      await expect(staking.updateServiceSigner(testUsers[5].address))
+        .to.emit(staking, 'ServiceSignerUpdated').withArgs(testUsers[5].address);
 
       await expect(staking.updateServiceSigner(serviceSigner.address))
         .to.emit(staking, 'ServiceSignerUpdated').withArgs(serviceSigner.address);
+    });
+
+    it("should update max tokens in stake and emit event", async function () {
+      const previousValue = await staking.maxTokensInStake();
+      const newValue = 1;
+
+      await expect(staking.updateMaxTokensInStake(newValue))
+        .to.emit(staking, 'MaxTokensInStakeUpdated').withArgs(newValue);
+
+      expect(await staking.maxTokensInStake()).to.equal(newValue);
+
+      await expect(staking.updateMaxTokensInStake(previousValue))
+        .to.emit(staking, 'MaxTokensInStakeUpdated').withArgs(previousValue);
     });
 
     it("should pause contract", async function () {
@@ -240,12 +258,16 @@ describe(`${stakingContractName} contract`, function () {
     });
 
     it("should toggleShutdown to true", async function () {
-      await staking.toggleShutdown(true);
+      await expect(staking.toggleShutdown(true))
+        .to.emit(staking, 'ToggleStakingShutdown').withArgs(true);
+
       expect(await staking.shutdown()).to.be.true;
     });
 
     it("should toggleShutdown to false", async function () {
-      await staking.toggleShutdown(false);
+      await expect(staking.toggleShutdown(false))
+        .to.emit(staking, 'ToggleStakingShutdown').withArgs(false);
+
       expect(await staking.shutdown()).to.be.false;
     });
 
@@ -942,6 +964,7 @@ describe(`${stakingContractName} contract`, function () {
       const staker = testUsers[5];
 
       const mintTokensAmount = 30;
+      const maxTokensPerUnstake = 20;
       const stakeTokenIds = new Array();
 
       for (let i = 0; i < mintTokensAmount; ++i) {
@@ -970,10 +993,13 @@ describe(`${stakingContractName} contract`, function () {
 
       await staking.connect(staker).stake(signedStakeVoucher);
 
+      const tokensInStakeBeforeEmergencyUnstake = await staking.tokensInStake();
+
       await staking.toggleShutdown(true);
       await staking.connect(staker).emergencyUnstake();
 
-      expect((await staking.getTokensByOwner(staker.address)).length).to.be.equal(mintTokensAmount - 20);
+      expect((await staking.getTokensByOwner(staker.address)).length).to.be.equal(mintTokensAmount - maxTokensPerUnstake);
+      expect(await staking.tokensInStake()).to.equal(tokensInStakeBeforeEmergencyUnstake - maxTokensPerUnstake);
 
       await staking.toggleShutdown(false);
     });
