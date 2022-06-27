@@ -1,26 +1,31 @@
 const StakeVoucherType = {
   StakeVoucher: [
     { name: "tokenIds", type: "uint256[]" },
-    { name: "rentable", type: "bool" },
-    { name: "minRentPeriod", type: "uint32" },
-    { name: "rentableUntil", type: "uint32" },
-    { name: "rentalDailyPrice", type: "uint96" },
-    { name: "deposit", type: "uint96" },
-    { name: "nonce", type: "uint256" },
-    { name: "owner", type: "address" }
+    { name: "owner", type: "address" },
+    { name: "nonce", type: "uint256" }
   ]
 };
 
 const UnstakeVoucherType = {
   UnstakeVoucher: [
     { name: "tokenIds", type: "uint256[]" },
-    { name: "nonce", type: "uint256" },
-    { name: "owner", type: "address" }
+    { name: "owner", type: "address" },
+    { name: "claimAmount", type: "uint256" },
+    { name: "nonce", type: "uint256" }
   ]
 };
 
 const ClaimVoucherType = {
   ClaimVoucher: [
+    { name: "tokenId", type: "uint256" },
+    { name: "amount", type: "uint256" },
+    { name: "nonce", type: "uint256" },
+    { name: "owner", type: "address" }
+  ]
+};
+
+const ClaimAllVoucherType = {
+  ClaimAllVoucher: [
     { name: "amount", type: "uint256" },
     { name: "nonce", type: "uint256" },
     { name: "owner", type: "address" }
@@ -65,5 +70,6 @@ module.exports = {
   EIP712Signer,
   StakeVoucherType,
   UnstakeVoucherType,
-  ClaimVoucherType
+  ClaimVoucherType,
+  ClaimAllVoucherType
 }
