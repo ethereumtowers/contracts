@@ -23,14 +23,10 @@ contract EthereumWorldsNFTStaking is
     using SafeERC20 for IERC20;
 
     struct StakeInfo {
-        bool rentable;
-        uint16 tokenIndex;
-        uint32 timestamp;
-        uint32 minRentPeriod;
-        uint32 rentableUntil;
-        uint96 rentalDailyPrice;
-        uint96 deposit;
         address owner;
+        uint32 tokenIndex;
+        uint32 stakeTimestamp;
+        uint32 rewardClaimTimestamp;
     }
 
     struct ClaimInfo {
@@ -40,24 +36,28 @@ contract EthereumWorldsNFTStaking is
 
     struct StakeVoucher {
         uint256[] tokenIds;
-        bool rentable;
-        uint32 minRentPeriod;
-        uint32 rentableUntil;
-        uint96 rentalDailyPrice;
-        uint96 deposit;
-        uint256 nonce;
         address owner;
+        uint256 nonce;
         bytes signature;
     }
 
     struct UnstakeVoucher {
         uint256[] tokenIds;
+        address owner;
+        uint256 claimAmount;
+        uint256 nonce;
+        bytes signature;
+    }
+
+    struct ClaimVoucher {
+        uint256 tokenId;
+        uint256 amount;
         uint256 nonce;
         address owner;
         bytes signature;
     }
 
-    struct ClaimVoucher {
+    struct ClaimAllVoucher {
         uint256 amount;
         uint256 nonce;
         address owner;
@@ -95,14 +95,9 @@ contract EthereumWorldsNFTStaking is
     event TokenStaked(
         address indexed owner,
         uint256 indexed tokenId,
-        bool rentable
+        uint32 timestamp
     );
     event TokenUnstaked(address indexed owner, uint256 indexed tokenId);
-    event TokenSetRentable(
-        address indexed owner,
-        uint256 indexed tokenId,
-        bool rentable
-    );
     event RewardClaimed(address indexed by, uint256 amount);
     event TokenRescue(
         address indexed token,
@@ -201,13 +196,9 @@ contract EthereumWorldsNFTStaking is
         );
 
         address signer = _verify(voucher);
-        require(signer == serviceSigner, "EWStaking: invalid signature");
-        require(
-            !signatureUsed[voucher.signature],
-            "EWStaking: this voucher already used"
-        );
+        _validateVoucherParams(signer, voucher.owner, voucher.signature);
 
-        require(_msgSender() == voucher.owner, "EWStaking: not your voucher");
+        uint32 timestamp = block.timestamp.toUint32();
 
         for (uint256 i = 0; i < voucher.tokenIds.length; ++i) {
             uint256 tokenId = voucher.tokenIds[i];
@@ -233,36 +224,18 @@ contract EthereumWorldsNFTStaking is
             uint256 index = userTokens[_msgSender()].length - 1;
 
             stakes[tokenId] = StakeInfo(
-                voucher.rentable,
-                index.toUint16(),
-                block.timestamp.toUint32(),
-                voucher.minRentPeriod,
-                voucher.rentableUntil,
-                voucher.rentalDailyPrice,
-                voucher.deposit,
-                _msgSender()
+                _msgSender(),
+                index.toUint32(),
+                timestamp,
+                0
             );
 
-            emit TokenStaked(_msgSender(), tokenId, voucher.rentable);
+            emit TokenStaked(_msgSender(), tokenId, timestamp);
         }
 
         tokensInStake += voucher.tokenIds.length;
 
         _markSignatureUsed(voucher.signature);
-    }
-
-    function _unstakeSingle(uint256 tokenId, address to) internal {
-        require(
-            stakes[tokenId].owner == _msgSender(),
-            "EWStaking: you are not an owner"
-        );
-
-        towersContract.safeTransferFrom(address(this), to, tokenId);
-
-        _deleteFromTokensArray(_msgSender(), tokenId);
-        delete stakes[tokenId];
-
-        emit TokenUnstaked(_msgSender(), tokenId);
     }
 
     function unstake(UnstakeVoucher calldata voucher, address to)
@@ -274,16 +247,17 @@ contract EthereumWorldsNFTStaking is
         require(voucher.tokenIds.length > 0, "EWStaking: nothing to unstake");
 
         address signer = _verify(voucher);
-        require(signer == serviceSigner, "EWStaking: invalid signature");
-        require(
-            !signatureUsed[voucher.signature],
-            "EWStaking: this voucher already used"
-        );
-
-        require(_msgSender() == voucher.owner, "EWStaking: not your voucher");
+        _validateVoucherParams(signer, voucher.owner, voucher.signature);
 
         for (uint256 i = 0; i < voucher.tokenIds.length; ++i) {
             _unstakeSingle(voucher.tokenIds[i], to);
+        }
+
+        if (voucher.claimAmount > 0) {
+            _transferReward(_msgSender(), voucher.claimAmount);
+            _markRewardClaimed(voucher.claimAmount);
+
+            emit RewardClaimed(_msgSender(), voucher.claimAmount);
         }
 
         tokensInStake -= voucher.tokenIds.length;
@@ -297,25 +271,21 @@ contract EthereumWorldsNFTStaking is
         nonReentrant
     {
         address signer = _verify(voucher);
-        require(signer == serviceSigner, "EWStaking: invalid signature");
 
-        require(
-            !signatureUsed[voucher.signature],
-            "EWStaking: this reward already claimed"
-        );
-
-        require(
-            voucher.owner == _msgSender(),
-            "EWStaking: not an owner of reward"
-        );
         require(voucher.amount > 0, "EWStaking: nothing to claim");
 
+        _validateVoucherParams(signer, voucher.owner, voucher.signature);
+
         require(
-            voucher.amount <= worldsToken.balanceOf(address(this)),
-            "EWStaking: not enough funds to claim"
+            stakes[voucher.tokenId].owner == _msgSender(),
+            "EWStaking: wrong stake owner"
         );
 
-        worldsToken.safeTransfer(_msgSender(), voucher.amount);
+        stakes[voucher.tokenId].rewardClaimTimestamp = block
+            .timestamp
+            .toUint32();
+
+        _transferReward(_msgSender(), voucher.amount);
 
         _markRewardClaimed(voucher.amount);
         _markSignatureUsed(voucher.signature);
@@ -323,26 +293,32 @@ contract EthereumWorldsNFTStaking is
         emit RewardClaimed(_msgSender(), voucher.amount);
     }
 
-    function setRentable(
-        uint256 tokenId,
-        bool _rentable,
-        uint32 _minRentPeriod,
-        uint32 _rentableUntil,
-        uint32 _rentalDailyPrice,
-        uint96 _deposit
-    ) external {
-        require(
-            stakes[tokenId].owner == _msgSender(),
-            "EWStaking: you are not an owner"
-        );
+    function claimAll(ClaimAllVoucher calldata voucher)
+        external
+        whenNotPaused
+        nonReentrant
+    {
+        address signer = _verify(voucher);
 
-        stakes[tokenId].rentable = _rentable;
-        stakes[tokenId].minRentPeriod = _minRentPeriod;
-        stakes[tokenId].rentableUntil = _rentableUntil;
-        stakes[tokenId].rentalDailyPrice = _rentalDailyPrice;
-        stakes[tokenId].deposit = _deposit;
+        require(voucher.amount > 0, "EWStaking: nothing to claim");
 
-        emit TokenSetRentable(_msgSender(), tokenId, _rentable);
+        _validateVoucherParams(signer, voucher.owner, voucher.signature);
+
+        uint256[] memory ids = userTokens[_msgSender()];
+        uint32 timestamp = block.timestamp.toUint32();
+
+        require(ids.length > 0, "EWStaking: no tokens in stake");
+
+        for (uint256 i = 0; i < ids.length; ++i) {
+            stakes[ids[i]].rewardClaimTimestamp = timestamp;
+        }
+
+        _transferReward(_msgSender(), voucher.amount);
+
+        _markRewardClaimed(voucher.amount);
+        _markSignatureUsed(voucher.signature);
+
+        emit RewardClaimed(_msgSender(), voucher.amount);
     }
 
     function emergencyUnstake() external whenNotPaused nonReentrant {
@@ -391,8 +367,43 @@ contract EthereumWorldsNFTStaking is
         return claims[stakeOwner];
     }
 
-    function isRentable(uint256 tokenId) external view returns (bool) {
-        return stakes[tokenId].rentable;
+    function _validateVoucherParams(
+        address signer,
+        address voucherOwner,
+        bytes calldata signature
+    ) internal view {
+        require(signer == serviceSigner, "EWStaking: invalid signature");
+        require(
+            !signatureUsed[signature],
+            "EWStaking: this voucher already used"
+        );
+
+        require(_msgSender() == voucherOwner, "EWStaking: not your voucher");
+    }
+
+    function _unstakeSingle(uint256 tokenId, address to) internal {
+        require(
+            stakes[tokenId].owner == _msgSender(),
+            "EWStaking: wrong stake owner"
+        );
+
+        towersContract.safeTransferFrom(address(this), to, tokenId);
+
+        _deleteFromTokensArray(_msgSender(), tokenId);
+        delete stakes[tokenId];
+
+        emit TokenUnstaked(_msgSender(), tokenId);
+    }
+
+    function _transferReward(address rewardOwner, uint256 claimAmount)
+        internal
+    {
+        require(
+            claimAmount <= worldsToken.balanceOf(address(this)),
+            "EWStaking: not enough funds to claim"
+        );
+
+        worldsToken.safeTransfer(rewardOwner, claimAmount);
     }
 
     function _markRewardClaimed(uint256 amount) internal {
@@ -436,16 +447,11 @@ contract EthereumWorldsNFTStaking is
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "StakeVoucher(uint256[] tokenIds,bool rentable,uint32 minRentPeriod,uint32 rentableUntil,uint96 rentalDailyPrice,uint96 deposit,uint256 nonce,address owner)"
+                            "StakeVoucher(uint256[] tokenIds,address owner,uint256 nonce)"
                         ),
                         keccak256(abi.encodePacked(voucher.tokenIds)),
-                        voucher.rentable,
-                        voucher.minRentPeriod,
-                        voucher.rentableUntil,
-                        voucher.rentalDailyPrice,
-                        voucher.deposit,
-                        voucher.nonce,
-                        voucher.owner
+                        voucher.owner,
+                        voucher.nonce
                     )
                 )
             );
@@ -461,11 +467,12 @@ contract EthereumWorldsNFTStaking is
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "UnstakeVoucher(uint256[] tokenIds,uint256 nonce,address owner)"
+                            "UnstakeVoucher(uint256[] tokenIds,address owner,uint256 claimAmount,uint256 nonce)"
                         ),
                         keccak256(abi.encodePacked(voucher.tokenIds)),
-                        voucher.nonce,
-                        voucher.owner
+                        voucher.owner,
+                        voucher.claimAmount,
+                        voucher.nonce
                     )
                 )
             );
@@ -481,7 +488,28 @@ contract EthereumWorldsNFTStaking is
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "ClaimVoucher(uint256 amount,uint256 nonce,address owner)"
+                            "ClaimVoucher(uint256 tokenId,uint256 amount,uint256 nonce,address owner)"
+                        ),
+                        voucher.tokenId,
+                        voucher.amount,
+                        voucher.nonce,
+                        voucher.owner
+                    )
+                )
+            );
+    }
+
+    function _hash(ClaimAllVoucher calldata voucher)
+        internal
+        view
+        returns (bytes32)
+    {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "ClaimAllVoucher(uint256 amount,uint256 nonce,address owner)"
                         ),
                         voucher.amount,
                         voucher.nonce,
@@ -510,6 +538,15 @@ contract EthereumWorldsNFTStaking is
     }
 
     function _verify(ClaimVoucher calldata voucher)
+        internal
+        view
+        returns (address)
+    {
+        bytes32 digest = _hash(voucher);
+        return ECDSA.recover(digest, voucher.signature);
+    }
+
+    function _verify(ClaimAllVoucher calldata voucher)
         internal
         view
         returns (address)

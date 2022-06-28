@@ -1,6 +1,12 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { EIP712Signer, StakeVoucherType, UnstakeVoucherType, ClaimVoucherType } = require('../utils/EIP712Signer')
+const {
+  EIP712Signer,
+  StakeVoucherType,
+  UnstakeVoucherType,
+  ClaimVoucherType,
+  ClaimAllVoucherType
+} = require('../utils/EIP712Signer')
 
 const stakingContractName = "EthereumWorldsNFTStaking";
 const erc721ContractName = "TestERC721";
@@ -13,21 +19,26 @@ const SIGNATURE_VERSION = "1";
 async function check_stake_events(tx, testUsers, tokenIds, rentable, N) {
   const receipt = await tx.wait();
   let index_valid_event = 0;
+
+  const latestBlock = await ethers.provider.getBlock("latest");
+
   for (const event of receipt.events) {
     if (event.event) {
       expect(event.event).equal("TokenStaked");
       expect(event.args[0]).equal(testUsers[0].address);
       expect(event.args[1]).equal(tokenIds[index_valid_event]);
-      expect(event.args[2]).equal(rentable);
+      expect(event.args[2]).equal(latestBlock.timestamp);
       index_valid_event++;
     }
   }
+
   expect(index_valid_event).equal(N);
 }
 
 async function check_unstake_events(tx, testUsers, tokenIds, N) {
   const receipt = await tx.wait();
   let index_valid_event = 0;
+
   for (const event of receipt.events) {
     if (event.event) {
       expect(event.event).equal("TokenUnstaked");
@@ -36,6 +47,7 @@ async function check_unstake_events(tx, testUsers, tokenIds, N) {
       index_valid_event++;
     }
   }
+
   expect(index_valid_event).equal(N);
 }
 
@@ -310,11 +322,6 @@ describe(`${stakingContractName} contract`, function () {
 
       const stakeVoucherData = {
         tokenIds: tokenIds,
-        rentable: true,
-        minRentPeriod: 1,
-        rentableUntil: 2,
-        rentalDailyPrice: 3,
-        deposit: 4,
         nonce: nonce++,
         owner: staker.address
       };
@@ -335,11 +342,6 @@ describe(`${stakingContractName} contract`, function () {
 
       const stakeVoucherData = {
         tokenIds: [1],
-        rentable: true,
-        minRentPeriod: 1,
-        rentableUntil: 2,
-        rentalDailyPrice: 3,
-        deposit: 4,
         nonce: nonce++,
         owner: staker.address
       };
@@ -362,11 +364,6 @@ describe(`${stakingContractName} contract`, function () {
 
       const stakeVoucherData = {
         tokenIds: [],
-        rentable: true,
-        minRentPeriod: 1,
-        rentableUntil: 2,
-        rentalDailyPrice: 3,
-        deposit: 4,
         nonce: nonce++,
         owner: staker.address
       };
@@ -385,11 +382,6 @@ describe(`${stakingContractName} contract`, function () {
 
       const stakeVoucherData = {
         tokenIds: tokenIds,
-        rentable: true,
-        minRentPeriod: 1,
-        rentableUntil: 2,
-        rentalDailyPrice: 3,
-        deposit: 4,
         nonce: nonce++,
         owner: staker.address
       };
@@ -410,11 +402,6 @@ describe(`${stakingContractName} contract`, function () {
 
       const stakeVoucherData = {
         tokenIds: tokenIds,
-        rentable: true,
-        minRentPeriod: 1,
-        rentableUntil: 2,
-        rentalDailyPrice: 3,
-        deposit: 4,
         nonce: nonce++,
         owner: staker.address
       };
@@ -433,11 +420,6 @@ describe(`${stakingContractName} contract`, function () {
 
       const stakeVoucherData = {
         tokenIds: tokenIds,
-        rentable: true,
-        minRentPeriod: 1,
-        rentableUntil: 2,
-        rentalDailyPrice: 3,
-        deposit: 4,
         nonce: nonce++,
         owner: staker.address
       };
@@ -454,6 +436,7 @@ describe(`${stakingContractName} contract`, function () {
 
       const unstakeVoucherData = {
         tokenIds: tokenIds,
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
@@ -472,11 +455,6 @@ describe(`${stakingContractName} contract`, function () {
 
       const stakeVoucherData = {
         tokenIds: tokenIds,
-        rentable: true,
-        minRentPeriod: 1,
-        rentableUntil: 2,
-        rentalDailyPrice: 3,
-        deposit: 4,
         nonce: nonce++,
         owner: staker.address
       };
@@ -496,11 +474,6 @@ describe(`${stakingContractName} contract`, function () {
 
       const stakeVoucherData = {
         tokenIds: notApprovedTokenIds,
-        rentable: true,
-        minRentPeriod: 1,
-        rentableUntil: 2,
-        rentalDailyPrice: 3,
-        deposit: 4,
         nonce: nonce++,
         owner: staker.address
       };
@@ -524,11 +497,6 @@ describe(`${stakingContractName} contract`, function () {
 
       const stakeVoucherData = {
         tokenIds: notApprovedTokenIds,
-        rentable: true,
-        minRentPeriod: 1,
-        rentableUntil: 2,
-        rentalDailyPrice: 3,
-        deposit: 4,
         nonce: nonce++,
         owner: staker.address
       };
@@ -550,11 +518,6 @@ describe(`${stakingContractName} contract`, function () {
 
       const stakeVoucherData = {
         tokenIds: [12345],
-        rentable: true,
-        minRentPeriod: 1,
-        rentableUntil: 2,
-        rentalDailyPrice: 3,
-        deposit: 4,
         nonce: nonce++,
         owner: staker.address
       };
@@ -582,11 +545,6 @@ describe(`${stakingContractName} contract`, function () {
 
       const stakeVoucherData = {
         tokenIds: tokenIds,
-        rentable: true,
-        minRentPeriod: 1,
-        rentableUntil: 2,
-        rentalDailyPrice: 3,
-        deposit: 4,
         nonce: nonce++,
         owner: staker.address
       };
@@ -605,51 +563,24 @@ describe(`${stakingContractName} contract`, function () {
       // check all events
       await check_stake_events(tx, testUsers, tokenIds, signedStakeVoucher.rentable, tokenIds.length);
 
+      const latestBlock = await ethers.provider.getBlock("latest")
+
       // check stack info owner and the number of tokens is 3
-      for (let i = 0; i < tokenIds.length; i++) {
-        expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(staker.address);
-        expect((await staking.getStakeInfo(tokenIds[i])).rentable).to.equal(signedStakeVoucher.rentable);
-        expect((await staking.getStakeInfo(tokenIds[i])).tokenIndex).to.equal(i);
-        expect((await staking.getStakeInfo(tokenIds[i])).minRentPeriod).to.equal(signedStakeVoucher.minRentPeriod);
-        expect((await staking.getStakeInfo(tokenIds[i])).rentableUntil).to.equal(signedStakeVoucher.rentableUntil);
-        expect((await staking.getStakeInfo(tokenIds[i])).rentalDailyPrice).to.equal(signedStakeVoucher.rentalDailyPrice);
-        expect((await staking.getStakeInfo(tokenIds[i])).deposit).to.equal(signedStakeVoucher.deposit);
+      for (let i = 0; i < tokenIds.length; ++i) {
+        const stakeInfo = await staking.getStakeInfo(tokenIds[i]);
+
+        expect(stakeInfo.owner).to.equal(staker.address);
+        expect(stakeInfo.stakeTimestamp).to.equal(latestBlock.timestamp);
+        expect(stakeInfo.rewardClaimTimestamp).to.equal(0);
       }
       expect((await staking.getTokensByOwner(staker.address)).length).to.equal(tokenIds.length);
     });
 
-    it("should set token rentable", async function () {
-      // check - staking is empty
-      expect((await staking.getTokensByOwner(testUsers[0].address)).length).to.equal(tokenIds.length);
-
-      const tokenId = 11;
-      const rentable = false;
-      const minRentPeriod = 10;
-      const rentableUntil = 20;
-      const rentalDailyPrice = 5;
-      const deposit = 100;
-      await expect(staking.setRentable(tokenId, rentable, minRentPeriod, rentableUntil, rentalDailyPrice, deposit))
-        .and.to.emit(staking, "TokenSetRentable").withArgs(testUsers[0].address, tokenId, rentable);
-
-      expect(await staking.isRentable(tokenId)).to.equal(rentable);
-      expect((await staking.getStakeInfo(tokenId)).minRentPeriod).to.equal(minRentPeriod);
-      expect((await staking.getStakeInfo(tokenId)).rentableUntil).to.equal(rentableUntil);
-      expect((await staking.getStakeInfo(tokenId)).rentalDailyPrice).to.equal(rentalDailyPrice);
-      expect((await staking.getStakeInfo(tokenId)).deposit).to.equal(deposit);
-      expect((await staking.getTokensByOwner(testUsers[0].address)).length).to.equal(tokenIds.length);
-    });
-
-    it("should restrict calling setRentable not for token owner", async function () {
-      expect((await staking.getTokensByOwner(testUsers[0].address)).length).to.equal(tokenIds.length);
-      const tokenId = 2;
-      await expect(staking.connect(testUsers[1]).setRentable(tokenId, false, 0, 0, 0, 0))
-        .to.be.revertedWith("EWStaking: you are not an owner");
-    });
-
     it("should restrict calling claim for invalid voucher signer", async function () {
-      const rewardOwner = testUsers[5];
+      const rewardOwner = testUsers[0];
 
       const claimVoucherData = {
+        tokenId: 1,
         amount: 10000,
         nonce: nonce++,
         owner: rewardOwner.address
@@ -669,6 +600,7 @@ describe(`${stakingContractName} contract`, function () {
       const rewardOwner = testUsers[5];
 
       const claimVoucherData = {
+        tokenId: 1,
         amount: 10000,
         nonce: nonce++,
         owner: rewardOwner.address
@@ -681,13 +613,14 @@ describe(`${stakingContractName} contract`, function () {
       );
 
       await expect(staking.connect(testUsers[1]).claim(signedClaimVoucher))
-        .to.be.revertedWith("EWStaking: not an owner of reward");
+        .to.be.revertedWith("EWStaking: not your voucher");
     });
 
     it("should restrict claiming same reward twice", async function () {
-      const rewardOwner = testUsers[5];
+      const rewardOwner = testUsers[0];
 
       const claimVoucherData = {
+        tokenId: 1,
         amount: 10000,
         nonce: nonce++,
         owner: rewardOwner.address
@@ -702,13 +635,14 @@ describe(`${stakingContractName} contract`, function () {
       await staking.connect(rewardOwner).claim(signedClaimVoucher);
 
       await expect(staking.connect(rewardOwner).claim(signedClaimVoucher))
-        .to.be.revertedWith("EWStaking: this reward already claimed");
+        .to.be.revertedWith("EWStaking: this voucher already used");
     });
 
     it("should restrict calling claim for zero amount", async function () {
       const rewardOwner = testUsers[5];
 
       const claimVoucherData = {
+        tokenId: 11,
         amount: 0,
         nonce: nonce++,
         owner: rewardOwner.address
@@ -725,9 +659,10 @@ describe(`${stakingContractName} contract`, function () {
     });
 
     it("should restrict calling claim for the huge amount", async function () {
-      const rewardOwner = testUsers[5];
+      const rewardOwner = testUsers[0];
 
       const claimVoucherData = {
+        tokenId: 11,
         amount: ethers.utils.parseEther("1000000000000"),
         nonce: nonce++,
         owner: rewardOwner.address
@@ -743,10 +678,31 @@ describe(`${stakingContractName} contract`, function () {
         .to.be.revertedWith("EWStaking: not enough funds to claim");
     });
 
+    it("should restrict calling claim for wrong token id", async function () {
+      const rewardOwner = testUsers[0];
+
+      const claimVoucherData = {
+        tokenId: 1113,
+        amount: ethers.utils.parseEther("1"),
+        nonce: nonce++,
+        owner: rewardOwner.address
+      };
+
+      const signedClaimVoucher = await eip712Signer.signVoucher(
+        claimVoucherData,
+        ClaimVoucherType,
+        serviceSigner
+      );
+
+      await expect(staking.connect(rewardOwner).claim(signedClaimVoucher))
+        .to.be.revertedWith("EWStaking: wrong stake owner");
+    });
+
     it("should claim rewards", async function () {
-      const rewardOwner = testUsers[5];
+      const rewardOwner = testUsers[0];
 
       const claimVoucherData = {
+        tokenId: 1,
         amount: ethers.utils.parseEther("1"),
         nonce: nonce++,
         owner: rewardOwner.address
@@ -765,17 +721,17 @@ describe(`${stakingContractName} contract`, function () {
         );
     });
 
-    it("should mark reward as claimed after claim", async function () {
-      const rewardOwner = testUsers[13];
+    it("should emit event after claim", async function () {
+      const rewardOwner = testUsers[0];
 
       const claimVoucherData = {
+        tokenId: 21,
         amount: ethers.utils.parseEther("1"),
         nonce: nonce++,
         owner: rewardOwner.address
       };
 
-      expect((await staking.getClaimsInfo(rewardOwner.address)).totalClaimed).to.equal(0);
-      expect((await staking.getClaimsInfo(rewardOwner.address)).lastClaimTimestamp).to.equal(0);
+      const claimInfoBefore = await staking.getClaimsInfo(rewardOwner.address);
 
       const signedClaimVoucher = await eip712Signer.signVoucher(
         claimVoucherData,
@@ -789,72 +745,90 @@ describe(`${stakingContractName} contract`, function () {
           claimVoucherData.amount
         );
 
-      const block = await ethers.provider.getBlock(await ethers.provider.getBlockNumber());
+      const block = await ethers.provider.getBlock("latest");
 
-      expect((await staking.getClaimsInfo(rewardOwner.address)).totalClaimed).to.equal(claimVoucherData.amount);
-      expect((await staking.getClaimsInfo(rewardOwner.address)).lastClaimTimestamp).to.equal(block.timestamp);
+      const claimInfoAfter = await staking.getClaimsInfo(rewardOwner.address);
+
+      expect(claimInfoAfter.totalClaimed).to.equal(claimInfoBefore.totalClaimed.add(claimVoucherData.amount));
+      expect(claimInfoAfter.lastClaimTimestamp).to.equal(block.timestamp);
     });
 
-    it("should restrict calling unstake not for your voucher", async function () {
+    it("should restrict calling unstake for wrong voucher owner", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: tokenIds,
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       await expect(staking.connect(testUsers[1]).unstake(signedUnstakeVoucher, staker.address))
         .to.be.revertedWith("EWStaking: not your voucher");
     });
 
     it("should restrict calling unstake for wrong token id", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: [12345],
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       await expect(staking.unstake(signedUnstakeVoucher, staker.address))
-        .to.be.revertedWith("EWStaking: you are not an owner");
+        .to.be.revertedWith("EWStaking: wrong stake owner");
     });
 
     it("should restrict calling unstake for empty token ids", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: [],
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       await expect(staking.unstake(signedUnstakeVoucher, staker.address))
         .to.be.revertedWith("EWStaking: nothing to unstake");
     });
 
     it("should restrict calling unstake for invalid destination", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: tokenIds,
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       await expect(staking.unstake(signedUnstakeVoucher, ethers.constants.AddressZero))
         .to.be.revertedWith("EWStaking: transfer to zero address");
       await expect(staking.unstake(signedUnstakeVoucher, staking.address))
@@ -863,16 +837,20 @@ describe(`${stakingContractName} contract`, function () {
 
     it("should restrict calling unstake for invalid signature", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: tokenIds,
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         testUsers[10]
       );
+
       await expect(staking.unstake(signedUnstakeVoucher, staker.address))
         .to.be.revertedWith("EWStaking: invalid signature");
     });
@@ -882,20 +860,24 @@ describe(`${stakingContractName} contract`, function () {
       for (let i = 0; i < tokenIds.length; i++) {
         expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(testUsers[0].address);
       }
+
       expect((await staking.getStakeInfo(0)).owner).to.equal(ethers.constants.AddressZero);
       expect((await staking.getTokensByOwner(testUsers[0].address)).length).to.equal(tokenIds.length);
 
       const staker = testUsers[0];
       const unstakeVoucherData = {
         tokenIds: tokenIds,
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       const tx = await staking.unstake(signedUnstakeVoucher, staker.address);
 
       // check all events
@@ -905,12 +887,53 @@ describe(`${stakingContractName} contract`, function () {
       for (let i = 0; i < tokenIds.length; i++) {
         expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(ethers.constants.AddressZero);
       }
+
       expect((await staking.getStakeInfo(0)).owner).to.equal(ethers.constants.AddressZero);
       expect((await staking.getTokensByOwner(testUsers[0].address)).length).to.equal(0);
 
       // check unstake with already used voucher
       await expect(staking.unstake(signedUnstakeVoucher, staker.address))
         .to.be.revertedWith("EWStaking: this voucher already used");
+    });
+
+    it("should unstake tokens and claim reward", async function () {
+      const staker = testUsers[0];
+
+      const stakeVoucherData = {
+        tokenIds: tokenIds,
+        nonce: nonce++,
+        owner: staker.address
+      }
+
+      const signedStakeVoucher = await eip712Signer.signVoucher(
+        stakeVoucherData,
+        StakeVoucherType,
+        serviceSigner
+      );
+
+      const unstakeVoucherData = {
+        tokenIds: tokenIds,
+        claimAmount: ethers.utils.parseEther('1'),
+        nonce: nonce++,
+        owner: staker.address
+      };
+
+      const signedUnstakeVoucher = await eip712Signer.signVoucher(
+        unstakeVoucherData,
+        UnstakeVoucherType,
+        serviceSigner
+      );
+
+      await staking.stake(signedStakeVoucher);
+
+      const stakerBalanceBefore = await erc20.balanceOf(staker.address);
+
+      await expect(staking.unstake(signedUnstakeVoucher, staker.address))
+        .to.emit(staking, 'RewardClaimed').withArgs(staker.address, unstakeVoucherData.claimAmount);
+
+      const stakerBalanceAfter = await erc20.balanceOf(staker.address);
+
+      expect(stakerBalanceAfter).to.equal(stakerBalanceBefore.add(unstakeVoucherData.claimAmount));
     });
 
     it("should restrict calling emergencyUnstake when contract is not shut down", async function () {
@@ -1062,19 +1085,16 @@ describe(`${stakingContractName} contract`, function () {
 
       const stakeVoucherData = {
         tokenIds: tokenIds,
-        rentable: true,
-        minRentPeriod: 1,
-        rentableUntil: 2,
-        rentalDailyPrice: 3,
-        deposit: 4,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedStakeVoucher = await eip712Signer.signVoucher(
         stakeVoucherData,
         StakeVoucherType,
         serviceSigner
       );
+
       await erc721.connect(staker).setApprovalForAll(staking.address, true);
       // check - staking is empty
       for (let i = 0; i < tokenIds.length; i++) {
@@ -1090,22 +1110,27 @@ describe(`${stakingContractName} contract`, function () {
       for (let i = 0; i < tokenIds.length; i++) {
         expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(testUsers[0].address);
       }
+
       expect((await staking.getStakeInfo(0)).owner).to.equal(ethers.constants.AddressZero);
       expect((await staking.getTokensByOwner(testUsers[0].address)).length).to.equal(tokenIds.length);
     });
 
     it("unstake all (1) token", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: tokenIds,
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       const tx = await staking.unstake(signedUnstakeVoucher, staker.address);
 
       // check all events
@@ -1115,24 +1140,29 @@ describe(`${stakingContractName} contract`, function () {
       for (let i = 0; i < tokenIds.length; i++) {
         expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(ethers.constants.AddressZero);
       }
+
       expect((await staking.getStakeInfo(0)).owner).to.equal(ethers.constants.AddressZero);
       expect((await staking.getTokensByOwner(testUsers[0].address)).length).to.equal(0);
     });
 
     it("unstake all (1) and the wrong token ids", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: [tokenIds[0], 12345],
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       await expect(staking.unstake(signedUnstakeVoucher, staker.address))
-        .to.be.revertedWith("EWStaking: you are not an owner");
+        .to.be.revertedWith("EWStaking: wrong stake owner");
 
       // check staking - has the same, single tokenId
       for (let i = 0; i < tokenIds.length; i++) {
@@ -1199,19 +1229,16 @@ describe(`${stakingContractName} contract`, function () {
 
       const stakeVoucherData = {
         tokenIds: tokenIds,
-        rentable: true,
-        minRentPeriod: 1,
-        rentableUntil: 2,
-        rentalDailyPrice: 3,
-        deposit: 4,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedStakeVoucher = await eip712Signer.signVoucher(
         stakeVoucherData,
         StakeVoucherType,
         serviceSigner
       );
+
       await erc721.connect(staker).setApprovalForAll(staking.address, true);
       // check - staking is empty
       for (let i = 0; i < tokenIds.length; i++) {
@@ -1227,22 +1254,27 @@ describe(`${stakingContractName} contract`, function () {
       for (let i = 0; i < tokenIds.length; i++) {
         expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(testUsers[0].address);
       }
+
       expect((await staking.getStakeInfo(0)).owner).to.equal(ethers.constants.AddressZero);
       expect((await staking.getTokensByOwner(testUsers[0].address)).length).to.equal(tokenIds.length);
     });
 
     it("unstake all (2) token", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: tokenIds,
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       const tx = await staking.unstake(signedUnstakeVoucher, staker.address);
 
       // check all events
@@ -1258,16 +1290,20 @@ describe(`${stakingContractName} contract`, function () {
 
     it("unstake all (2) tokens in the reverse order", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: tokenIds.slice().reverse(),
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       const tx = await staking.unstake(signedUnstakeVoucher, staker.address);
 
       // check all events
@@ -1285,14 +1321,17 @@ describe(`${stakingContractName} contract`, function () {
       const staker = testUsers[0];
       const unstakeVoucherData = {
         tokenIds: [tokenIds[0]],
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       const tx = await staking.unstake(signedUnstakeVoucher, staker.address);
 
       // check all events
@@ -1308,16 +1347,20 @@ describe(`${stakingContractName} contract`, function () {
 
     it("unstake only the last one", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: [tokenIds[tokenIds.length - 1]],
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       const tx = await staking.unstake(signedUnstakeVoucher, staker.address);
 
       // check all events for unstake
@@ -1333,18 +1376,22 @@ describe(`${stakingContractName} contract`, function () {
 
     it("unstake the first and the wrong token ids", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: [tokenIds[0], 12345],
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       await expect(staking.unstake(signedUnstakeVoucher, staker.address))
-        .to.be.revertedWith("EWStaking: you are not an owner");
+        .to.be.revertedWith("EWStaking: wrong stake owner");
 
       // check staking - has the same (3) tokenIds
       for (let i = 0; i < tokenIds.length; i++) {
@@ -1411,19 +1458,16 @@ describe(`${stakingContractName} contract`, function () {
 
       const stakeVoucherData = {
         tokenIds: tokenIds,
-        rentable: true,
-        minRentPeriod: 1,
-        rentableUntil: 2,
-        rentalDailyPrice: 3,
-        deposit: 4,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedStakeVoucher = await eip712Signer.signVoucher(
         stakeVoucherData,
         StakeVoucherType,
         serviceSigner
       );
+
       await erc721.connect(staker).setApprovalForAll(staking.address, true);
       // check - staking is empty
       for (let i = 0; i < tokenIds.length; i++) {
@@ -1439,22 +1483,27 @@ describe(`${stakingContractName} contract`, function () {
       for (let i = 0; i < tokenIds.length; i++) {
         expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(testUsers[0].address);
       }
+
       expect((await staking.getStakeInfo(0)).owner).to.equal(ethers.constants.AddressZero);
       expect((await staking.getTokensByOwner(testUsers[0].address)).length).to.equal(tokenIds.length);
     });
 
     it("unstake all (3) token", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: tokenIds,
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       const tx = await staking.unstake(signedUnstakeVoucher, staker.address);
 
       // check all events
@@ -1464,22 +1513,27 @@ describe(`${stakingContractName} contract`, function () {
       for (let i = 0; i < tokenIds.length; i++) {
         expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(ethers.constants.AddressZero);
       }
+
       expect((await staking.getStakeInfo(0)).owner).to.equal(ethers.constants.AddressZero);
       expect((await staking.getTokensByOwner(testUsers[0].address)).length).to.equal(0);
     });
 
     it("unstake all (3) tokens in the reverse order", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: tokenIds.slice().reverse(),
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       const tx = await staking.unstake(signedUnstakeVoucher, staker.address);
 
       // check all events
@@ -1489,22 +1543,27 @@ describe(`${stakingContractName} contract`, function () {
       for (let i = 0; i < tokenIds.length; i++) {
         expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(ethers.constants.AddressZero);
       }
+
       expect((await staking.getStakeInfo(0)).owner).to.equal(ethers.constants.AddressZero);
       expect((await staking.getTokensByOwner(testUsers[0].address)).length).to.equal(0);
     });
 
     it("unstake only the first one", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: [tokenIds[0]],
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       const tx = await staking.unstake(signedUnstakeVoucher, staker.address);
 
       // check all events
@@ -1523,16 +1582,20 @@ describe(`${stakingContractName} contract`, function () {
 
     it("unstake only the last one", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: [tokenIds[tokenIds.length - 1]],
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       const tx = await staking.unstake(signedUnstakeVoucher, staker.address);
 
       // check all events for unstake
@@ -1550,16 +1613,20 @@ describe(`${stakingContractName} contract`, function () {
 
     it("unstake only the middle one", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: [tokenIds[1]],
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       const tx = await staking.unstake(signedUnstakeVoucher, staker.address);
 
       // check all events for unstake
@@ -1577,23 +1644,241 @@ describe(`${stakingContractName} contract`, function () {
 
     it("unstake the first and the wrong token ids", async function () {
       const staker = testUsers[0];
+
       const unstakeVoucherData = {
         tokenIds: [tokenIds[0], 12345],
+        claimAmount: 0,
         nonce: nonce++,
         owner: staker.address
       };
+
       const signedUnstakeVoucher = await eip712Signer.signVoucher(
         unstakeVoucherData,
         UnstakeVoucherType,
         serviceSigner
       );
+
       await expect(staking.unstake(signedUnstakeVoucher, staker.address))
-        .to.be.revertedWith("EWStaking: you are not an owner");
+        .to.be.revertedWith("EWStaking: wrong stake owner");
 
       // check staking - has the same (3) tokenIds
       for (let i = 0; i < tokenIds.length; i++) {
         expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(testUsers[0].address);
         expect((await staking.getTokensByOwner(testUsers[0].address))[i]).to.equal(ethers.BigNumber.from(tokenIds[i]));
+      }
+    });
+  });
+
+  describe("Claim all rewards", function () {
+    let testUsers;
+    let erc20;
+    let erc721;
+    let staking;
+
+    let serviceSigner;
+
+    let tokenIds = [111, 222, 333];
+
+    let eip712Signer;
+
+    let nonce = 0;
+
+    beforeEach(async () => {
+      testUsers = await ethers.getSigners();
+      serviceSigner = testUsers[1];
+
+      const erc20ContractFactory = await ethers.getContractFactory(erc20ContractName);
+      erc20 = await erc20ContractFactory.deploy();
+      await erc20.deployed();
+
+      const erc721ContractFactory = await ethers.getContractFactory(erc721ContractName);
+      erc721 = await erc721ContractFactory.deploy();
+      await erc721.deployed();
+
+      const stakingContractFactory = await ethers.getContractFactory(stakingContractName);
+      staking = await stakingContractFactory.deploy(
+        erc20.address,
+        erc721.address,
+        serviceSigner.address,
+      );
+
+      await staking.deployed();
+
+      eip712Signer = new EIP712Signer({
+        signing_domain: SIGNING_DOMAIN,
+        signature_version: SIGNATURE_VERSION,
+        contract: staking
+      });
+
+      // prepare stake for tokens
+      for (let i = 0; i < tokenIds.length; i++) {
+        await erc721.mint(testUsers[0].address, tokenIds[i]);
+        await erc721.approve(staking.address, tokenIds[i]);
+      }
+      // transfer 1000000 ether = 1e24
+      erc20.transfer(staking.address, ethers.utils.parseEther("1000000"));
+
+      const staker = testUsers[0];
+      // check - staking is empty
+      for (let i = 0; i < tokenIds.length; i++) {
+        expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(ethers.constants.AddressZero);
+      }
+
+      const stakeVoucherData = {
+        tokenIds: tokenIds,
+        nonce: nonce++,
+        owner: staker.address
+      };
+
+      const signedStakeVoucher = await eip712Signer.signVoucher(
+        stakeVoucherData,
+        StakeVoucherType,
+        serviceSigner
+      );
+
+      await erc721.connect(staker).setApprovalForAll(staking.address, true);
+      // check - staking is empty
+      for (let i = 0; i < tokenIds.length; i++) {
+        expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(ethers.constants.AddressZero);
+      }
+
+      // stake  tokens
+      const tx = await staking.connect(staker).stake(signedStakeVoucher);
+
+      // check all events for stake
+      await check_stake_events(tx, testUsers, tokenIds, signedStakeVoucher.rentable, tokenIds.length);
+      // check stack info owner and the number of tokens
+      for (let i = 0; i < tokenIds.length; i++) {
+        expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(testUsers[0].address);
+      }
+
+      expect((await staking.getStakeInfo(0)).owner).to.equal(ethers.constants.AddressZero);
+      expect((await staking.getTokensByOwner(testUsers[0].address)).length).to.equal(tokenIds.length);
+    });
+
+    it("should revert claim all for zero amount", async function () {
+      const staker = testUsers[0];
+
+      const claimAllData = {
+        amount: 0,
+        nonce: nonce++,
+        owner: staker.address
+      };
+
+      const signedClaimAllVoucher = await eip712Signer.signVoucher(
+        claimAllData,
+        ClaimAllVoucherType,
+        serviceSigner
+      );
+
+      await expect(staking.claimAll(signedClaimAllVoucher))
+        .to.be.revertedWith("EWStaking: nothing to claim");
+    });
+
+    it("should revert claim all with wrong voucher signature", async function () {
+      const staker = testUsers[0];
+
+      const claimAllData = {
+        amount: ethers.utils.parseEther('100'),
+        nonce: nonce++,
+        owner: staker.address
+      };
+
+      const signedClaimAllVoucher = await eip712Signer.signVoucher(
+        claimAllData,
+        ClaimAllVoucherType,
+        testUsers[11]
+      );
+
+      await expect(staking.claimAll(signedClaimAllVoucher))
+        .to.be.revertedWith("EWStaking: invalid signature");
+    });
+
+    it("should revert claim all with already used voucher", async function () {
+      const staker = testUsers[0];
+
+      const claimAllData = {
+        amount: ethers.utils.parseEther('100'),
+        nonce: nonce++,
+        owner: staker.address
+      };
+
+      const signedClaimAllVoucher = await eip712Signer.signVoucher(
+        claimAllData,
+        ClaimAllVoucherType,
+        serviceSigner
+      );
+
+      await staking.claimAll(signedClaimAllVoucher);
+
+      await expect(staking.claimAll(signedClaimAllVoucher))
+        .to.be.revertedWith("EWStaking: this voucher already used");
+    });
+
+    it("should revert claim all for wrong caller", async function () {
+      const staker = testUsers[0];
+
+      const claimAllData = {
+        amount: ethers.utils.parseEther('100'),
+        nonce: nonce++,
+        owner: staker.address
+      };
+
+      const signedClaimAllVoucher = await eip712Signer.signVoucher(
+        claimAllData,
+        ClaimAllVoucherType,
+        serviceSigner
+      );
+
+      await expect(staking.connect(testUsers[3]).claimAll(signedClaimAllVoucher))
+        .to.be.revertedWith("EWStaking: not your voucher");
+    });
+
+    it("should revert claim all for zero staked tokens", async function () {
+      const claimer = testUsers[2];
+
+      const claimAllData = {
+        amount: ethers.utils.parseEther('100'),
+        nonce: nonce++,
+        owner: claimer.address
+      };
+
+      const signedClaimAllVoucher = await eip712Signer.signVoucher(
+        claimAllData,
+        ClaimAllVoucherType,
+        serviceSigner
+      );
+
+      await expect(staking.connect(claimer).claimAll(signedClaimAllVoucher))
+        .to.be.revertedWith("EWStaking: no tokens in stake");
+    });
+
+    it("should claim all rewards", async function () {
+      const staker = testUsers[0];
+
+      const claimAllData = {
+        amount: ethers.utils.parseEther('100'),
+        nonce: nonce++,
+        owner: staker.address
+      };
+
+      const signedClaimAllVoucher = await eip712Signer.signVoucher(
+        claimAllData,
+        ClaimAllVoucherType,
+        serviceSigner
+      );
+
+      for (let i = 0; i < tokenIds.length; i++) {
+        expect((await staking.getStakeInfo(tokenIds[i])).rewardClaimTimestamp).to.equal(0);
+      }
+
+      await expect(staking.claimAll(signedClaimAllVoucher))
+        .to.emit(staking, 'RewardClaimed').withArgs(staker.address, claimAllData.amount);
+
+      const latestBlock = await ethers.provider.getBlock("latest");
+
+      for (let i = 0; i < tokenIds.length; i++) {
+        expect((await staking.getStakeInfo(tokenIds[i])).rewardClaimTimestamp).to.equal(latestBlock.timestamp);
       }
     });
   });
