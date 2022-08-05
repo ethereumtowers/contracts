@@ -95,10 +95,24 @@ contract EthereumWorldsNFTStaking is
     event TokenStaked(
         address indexed owner,
         uint256 indexed tokenId,
-        uint32 timestamp
+        uint256 timestamp
     );
-    event TokenUnstaked(address indexed owner, uint256 indexed tokenId);
-    event RewardClaimed(address indexed by, uint256 amount);
+    event TokenUnstaked(
+        address indexed owner,
+        uint256 indexed tokenId,
+        uint256 timestamp
+    );
+    event RewardClaimed(
+        address indexed by,
+        uint256 indexed tokenId,
+        bytes indexed siganture,
+        uint256 amount
+    );
+    event RewardClaimedAll(
+        address indexed by,
+        bytes indexed signature,
+        uint256 amount
+    );
     event TokenRescue(
         address indexed token,
         address indexed to,
@@ -257,7 +271,11 @@ contract EthereumWorldsNFTStaking is
             _transferReward(_msgSender(), voucher.claimAmount);
             _markRewardClaimed(voucher.claimAmount);
 
-            emit RewardClaimed(_msgSender(), voucher.claimAmount);
+            emit RewardClaimedAll(
+                _msgSender(),
+                voucher.signature,
+                voucher.claimAmount
+            );
         }
 
         tokensInStake -= voucher.tokenIds.length;
@@ -290,7 +308,12 @@ contract EthereumWorldsNFTStaking is
         _markRewardClaimed(voucher.amount);
         _markSignatureUsed(voucher.signature);
 
-        emit RewardClaimed(_msgSender(), voucher.amount);
+        emit RewardClaimed(
+            _msgSender(),
+            voucher.tokenId,
+            voucher.signature,
+            voucher.amount
+        );
     }
 
     function claimAll(ClaimAllVoucher calldata voucher)
@@ -318,7 +341,7 @@ contract EthereumWorldsNFTStaking is
         _markRewardClaimed(voucher.amount);
         _markSignatureUsed(voucher.signature);
 
-        emit RewardClaimed(_msgSender(), voucher.amount);
+        emit RewardClaimedAll(_msgSender(), voucher.signature, voucher.amount);
     }
 
     function emergencyUnstake() external whenNotPaused nonReentrant {
@@ -392,7 +415,7 @@ contract EthereumWorldsNFTStaking is
         _deleteFromTokensArray(_msgSender(), tokenId);
         delete stakes[tokenId];
 
-        emit TokenUnstaked(_msgSender(), tokenId);
+        emit TokenUnstaked(_msgSender(), tokenId, block.timestamp);
     }
 
     function _transferReward(address rewardOwner, uint256 claimAmount)

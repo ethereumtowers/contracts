@@ -16,7 +16,7 @@ const SIGNING_DOMAIN = "EW_STAKING";
 const SIGNATURE_VERSION = "1";
 
 
-async function check_stake_events(tx, testUsers, tokenIds, rentable, N) {
+async function check_stake_events(tx, testUsers, tokenIds, N) {
   const receipt = await tx.wait();
   let index_valid_event = 0;
 
@@ -39,11 +39,14 @@ async function check_unstake_events(tx, testUsers, tokenIds, N) {
   const receipt = await tx.wait();
   let index_valid_event = 0;
 
+  const latestBlock = await ethers.provider.getBlock("latest");
+
   for (const event of receipt.events) {
     if (event.event) {
       expect(event.event).equal("TokenUnstaked");
       expect(event.args[0]).equal(testUsers[0].address);
       expect(event.args[1]).equal(tokenIds[index_valid_event]);
+      expect(event.args[2]).equal(latestBlock.timestamp);
       index_valid_event++;
     }
   }
@@ -531,7 +534,7 @@ describe(`${stakingContractName} contract`, function () {
       await erc721.setApprovalForAll(staking.address, true);
 
       await expect(staking.stake(signedStakeVoucher))
-        .to.be.revertedWith("ERC721: owner query for nonexistent token");
+        .to.be.revertedWith("ERC721: invalid token ID");
 
       await erc721.setApprovalForAll(staking.address, false);
     });
@@ -561,7 +564,7 @@ describe(`${stakingContractName} contract`, function () {
       const tx = await staking.connect(staker).stake(signedStakeVoucher);
 
       // check all events
-      await check_stake_events(tx, testUsers, tokenIds, signedStakeVoucher.rentable, tokenIds.length);
+      await check_stake_events(tx, testUsers, tokenIds, tokenIds.length);
 
       const latestBlock = await ethers.provider.getBlock("latest")
 
@@ -717,6 +720,8 @@ describe(`${stakingContractName} contract`, function () {
       await expect(staking.connect(rewardOwner).claim(signedClaimVoucher))
         .to.emit(staking, "RewardClaimed").withArgs(
           rewardOwner.address,
+          claimVoucherData.tokenId,
+          signedClaimVoucher.signature,
           claimVoucherData.amount
         );
     });
@@ -742,6 +747,8 @@ describe(`${stakingContractName} contract`, function () {
       await expect(staking.connect(rewardOwner).claim(signedClaimVoucher))
         .to.emit(staking, "RewardClaimed").withArgs(
           rewardOwner.address,
+          claimVoucherData.tokenId,
+          signedClaimVoucher.signature,
           claimVoucherData.amount
         );
 
@@ -929,7 +936,11 @@ describe(`${stakingContractName} contract`, function () {
       const stakerBalanceBefore = await erc20.balanceOf(staker.address);
 
       await expect(staking.unstake(signedUnstakeVoucher, staker.address))
-        .to.emit(staking, 'RewardClaimed').withArgs(staker.address, unstakeVoucherData.claimAmount);
+        .to.emit(staking, 'RewardClaimedAll').withArgs(
+          staker.address,
+          signedUnstakeVoucher.signature,
+          unstakeVoucherData.claimAmount
+        );
 
       const stakerBalanceAfter = await erc20.balanceOf(staker.address);
 
@@ -1105,7 +1116,7 @@ describe(`${stakingContractName} contract`, function () {
       const tx = await staking.connect(staker).stake(signedStakeVoucher);
 
       // check all events for stake
-      await check_stake_events(tx, testUsers, tokenIds, signedStakeVoucher.rentable, tokenIds.length);
+      await check_stake_events(tx, testUsers, tokenIds, tokenIds.length);
       // check stack info owner and the number of tokens
       for (let i = 0; i < tokenIds.length; i++) {
         expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(testUsers[0].address);
@@ -1249,7 +1260,7 @@ describe(`${stakingContractName} contract`, function () {
       const tx = await staking.connect(staker).stake(signedStakeVoucher);
 
       // check all events for stake
-      await check_stake_events(tx, testUsers, tokenIds, signedStakeVoucher.rentable, tokenIds.length);
+      await check_stake_events(tx, testUsers, tokenIds, tokenIds.length);
       // check stack info owner and the number of tokens
       for (let i = 0; i < tokenIds.length; i++) {
         expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(testUsers[0].address);
@@ -1478,7 +1489,7 @@ describe(`${stakingContractName} contract`, function () {
       const tx = await staking.connect(staker).stake(signedStakeVoucher);
 
       // check all events for stake
-      await check_stake_events(tx, testUsers, tokenIds, signedStakeVoucher.rentable, tokenIds.length);
+      await check_stake_events(tx, testUsers, tokenIds, tokenIds.length);
       // check stack info owner and the number of tokens
       for (let i = 0; i < tokenIds.length; i++) {
         expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(testUsers[0].address);
@@ -1746,7 +1757,7 @@ describe(`${stakingContractName} contract`, function () {
       const tx = await staking.connect(staker).stake(signedStakeVoucher);
 
       // check all events for stake
-      await check_stake_events(tx, testUsers, tokenIds, signedStakeVoucher.rentable, tokenIds.length);
+      await check_stake_events(tx, testUsers, tokenIds, tokenIds.length);
       // check stack info owner and the number of tokens
       for (let i = 0; i < tokenIds.length; i++) {
         expect((await staking.getStakeInfo(tokenIds[i])).owner).to.equal(testUsers[0].address);
@@ -1873,7 +1884,11 @@ describe(`${stakingContractName} contract`, function () {
       }
 
       await expect(staking.claimAll(signedClaimAllVoucher))
-        .to.emit(staking, 'RewardClaimed').withArgs(staker.address, claimAllData.amount);
+        .to.emit(staking, 'RewardClaimedAll').withArgs(
+          staker.address,
+          signedClaimAllVoucher.signature,
+          claimAllData.amount
+        );
 
       const latestBlock = await ethers.provider.getBlock("latest");
 
